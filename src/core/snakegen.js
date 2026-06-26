@@ -11,12 +11,15 @@
 //   mask cells. Removing in reverse-of-placement order is a valid solution, so
 //   every generated level is solvable by construction (verified by the solver).
 
-import { DIRS, VEC, OPPOSITE } from './dir2d.js';
+import { DIRS, VEC, OPPOSITE, dirBetween } from './dir2d.js';
 import { makeArrow, Board } from './board.js';
 import { isSolvable } from './escape2.js';
 import { makeRng, randInt, shuffle } from './rng.js';
 
 const key = (x, y) => `${x},${y}`;
+
+// Perpendicular directions (used to introduce bends at higher levels).
+const PERP = { U: ['L', 'R'], D: ['L', 'R'], L: ['U', 'D'], R: ['U', 'D'] };
 
 function distanceToExterior(mask) {
   const { cols, rows, cells } = mask;
@@ -60,7 +63,9 @@ function clearDirs(cols, rows, placed, x, y, rng) {
 }
 
 // One attempt to fill the mask. Returns { arrows, covered }.
-function fillAttempt(mask, seed, maxLen) {
+// bendChance (0..1) controls how often the body turns -> harder, winding arrows
+// at higher levels. The head segment is always kept straight (clean "muh").
+function fillAttempt(mask, seed, maxLen, bendChance = 0) {
   const { cols, rows, cells } = mask;
   const rng = makeRng(seed);
   const dist = distanceToExterior(mask);
@@ -95,19 +100,35 @@ function fillAttempt(mask, seed, maxLen) {
       while (x >= 0 && x < cols && y >= 0 && y < rows) { rayCells.add(key(x, y)); x += v.x; y += v.y; }
     }
 
-    // Grow a STRAIGHT body backward (opposite the head direction). Arrows are
-    // straight lines only -> clean, un-bent heads ("seedha"). Stops when the
-    // straight cell ahead isn't an empty mask cell.
+    // Grow the body backward from the head. The FIRST step is always straight
+    // back so the arrowhead stays clean and aligned. Later steps may bend
+    // (probability rises with level) to make winding, confusing arrows.
     const chain = [{ x: best.x, y: best.y }]; // head first; reverse later
     const inChain = new Set([key(best.x, best.y)]);
-    const bv = VEC[OPPOSITE[bestDir]];
-    let cur = best;
-    while (chain.length < maxLen) {
-      const n = { x: cur.x + bv.x, y: cur.y + bv.y };
-      const k = key(n.x, n.y);
-      if (cells.has(k) && !placed.has(k) && !inChain.has(k) && !rayCells.has(k)) {
-        chain.push(n); inChain.add(k); cur = n;
-      } else break;
+    const isFree = (x, y) => {
+      const k = key(x, y);
+      return cells.has(k) && !placed.has(k) && !inChain.has(k) && !rayCells.has(k);
+    };
+    {
+      const bv = VEC[OPPOSITE[bestDir]];
+      const nx = best.x + bv.x, ny = best.y + bv.y;
+      if (isFree(nx, ny)) { chain.push({ x: nx, y: ny }); inChain.add(key(nx, ny)); }
+    }
+    let cur = chain[chain.length - 1];
+    while (chain.length >= 2 && chain.length < maxLen) {
+      const prev = chain[chain.length - 2];
+      const travel = dirBetween(prev, cur);
+      const order = (rng() < bendChance)
+        ? [...PERP[travel], travel]                       // prefer a turn
+        : (bendChance > 0 ? [travel, ...PERP[travel]]     // straight, bend if blocked
+                          : [travel]);                    // pure straight (easy levels)
+      let next = null;
+      for (const d of order) {
+        const nx = cur.x + VEC[d].x, ny = cur.y + VEC[d].y;
+        if (isFree(nx, ny)) { next = { x: nx, y: ny }; break; }
+      }
+      if (!next) break;
+      chain.push(next); inChain.add(key(next.x, next.y)); cur = next;
     }
 
     const cellsTailToHead = chain.slice().reverse(); // tail .. head
@@ -164,11 +185,11 @@ function boardOf(cols, rows, arrows) {
 
 // Generate a solvable, mostly-complete shape level.
 // Returns a level def: { name, cols, rows, arrows:[{cells,dir}], shape }.
-export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 6, mask }) {
+export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 6, mask, bendChance = 0 }) {
   const m = mask;
   let bestRaw = null, bestCover = -1, bestTotal = 1;
   for (let attempt = 0; attempt < 6; attempt++) {
-    const { arrows, covered, total } = fillAttempt(m, seed + attempt * 101, maxLen);
+    const { arrows, covered, total } = fillAttempt(m, seed + attempt * 101, maxLen, bendChance);
     if (!isSolvable(boardOf(cols, rows, arrows))) continue; // safety (always true)
     if (covered > bestCover) {
       bestCover = covered; bestTotal = total; bestRaw = arrows;

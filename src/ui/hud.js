@@ -99,6 +99,18 @@ export class Hud {
     this.hintBtn.classList.toggle('loading', pending);
   }
 
+  setContinuePending(pending) {
+    // Disable overlay buttons while the rewarded ad is loading.
+    this.cardButtons.querySelectorAll('button').forEach((b) => { b.disabled = pending; });
+  }
+
+  _fmtTime(ms) {
+    const s = Math.round(ms / 1000);
+    const m = Math.floor(s / 60);
+    const ss = String(s % 60).padStart(2, '0');
+    return m > 0 ? `${m}:${ss}` : `${s}s`;
+  }
+
   // ---- screens ----
   showMenuFor(game) { this.showMenu(() => { game.audio.resume(); game.loadLevel(0); }); }
 
@@ -125,9 +137,10 @@ export class Hud {
   showWin(game) {
     this._showControls(false);
     const last = game.levelIndex + 1 >= game.levels.length;
+    const stats = `Time  ${this._fmtTime(game.solveMs)}     ·     Lives left  ${game.lives}/${game.maxLives}`;
     this._showOverlay(
       'Cleared!',
-      last ? 'Beautiful — the board is empty.' : 'Nicely solved. Ready for the next one?',
+      stats,
       [{ label: last ? 'Finish' : 'Next Level', primary: true,
          onClick: () => { this.hideOverlay(); game.nextLevel(); } }]
     );
@@ -137,8 +150,11 @@ export class Hud {
     this._showControls(false);
     this._showOverlay(
       'Out of lives',
-      'No worries — take a breath and rethink your order.',
-      [{ label: 'Try Again', primary: true, onClick: () => { this.hideOverlay(); game.retryLevel(); } }]
+      'Watch a short video to get 3 lives and keep your progress — or start the level over.',
+      [
+        { label: 'Watch Ad  ·  +3 Lives', primary: true, onClick: () => game.continueWithAd() },
+        { label: 'Restart Level', onClick: () => { this.hideOverlay(); game.retryLevel(); } },
+      ]
     );
   }
 

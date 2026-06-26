@@ -40,6 +40,8 @@ export class Game {
     this.lives = this.maxLives;
     this.hints = 1;
     this.armed = new Set(); // arrows tapped while blocked -> shown red, auto-exit when free
+    this.startTime = performance.now();
+    this.solveMs = 0;
     this.view.setGrid(def.cols, def.rows);
     this.animator.reset();
     this.animator.spawnAll(this.board.allArrows());
@@ -133,6 +135,7 @@ export class Game {
 
   _win() {
     this.state = GameState.WON; this.busy = true;
+    this.solveMs = performance.now() - this.startTime;
     this.audio.win(); this.adapter.gameplayStop(); this.adapter.happyTime();
     saveProgress(this.levelIndex + 1);
     setTimeout(() => this.hud.showWin(this), 650);
@@ -142,6 +145,25 @@ export class Game {
     this.state = GameState.LOST; this.busy = true;
     this.audio.lose(); this.adapter.gameplayStop();
     setTimeout(() => this.hud.showLose(this), 450);
+  }
+
+  // Watch a rewarded ad to refill lives and CONTINUE the same board (progress kept).
+  async continueWithAd() {
+    this.busy = true;
+    this.hud.setContinuePending(true);
+    let granted = true;
+    try { granted = await this.adapter.showRewarded(); } catch (_) { granted = true; }
+    this.hud.setContinuePending(false);
+    if (granted) {
+      this.lives = this.maxLives;
+      this.hud.updateLives(this);
+      this.hud.hideOverlay();
+      this.state = GameState.PLAYING;
+      this.busy = false;
+      this.adapter.gameplayStart();
+    } else {
+      this.busy = false; // ad skipped/failed -> stay on lose screen
+    }
   }
 
   async nextLevel() {
