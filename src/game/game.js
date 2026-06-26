@@ -39,6 +39,7 @@ export class Game {
     this.maxLives = def.lives || 3;
     this.lives = this.maxLives;
     this.hints = 1;
+    this.armed = new Set(); // arrows tapped while blocked -> shown red, auto-exit when free
     this.view.setGrid(def.cols, def.rows);
     this.animator.reset();
     this.animator.spawnAll(this.board.allArrows());
@@ -69,19 +70,42 @@ export class Game {
     this.animator.clearHint();
 
     if (canEscape(this.board, arrow)) {
-      const toEdge = this._cellsToEdge(arrow);
-      this.board.removeArrow(arrow);
-      this.animator.escape(arrow, toEdge);
-      this.audio.escape();
-      this.hud.updateRemaining(this);
-      if (this.board.isCleared) this._win();
-    } else {
+      this._release(arrow);
+      this._autoRelease();           // freed-up red arrows leave automatically
+    } else if (!this.armed.has(arrow.id)) {
+      // Blocked: mark it red (it will auto-exit once its path clears) and the
+      // wrong tap costs a life.
+      this.armed.add(arrow.id);
       this.animator.shake(arrow.id);
       this.audio.blocked();
       this.lives -= 1;
       this.hud.updateLives(this);
       if (this.lives <= 0) this._lose();
     }
+  }
+
+  // Slide one arrow off the board.
+  _release(arrow) {
+    const toEdge = this._cellsToEdge(arrow);
+    this.board.removeArrow(arrow);
+    this.armed.delete(arrow.id);
+    this.animator.escape(arrow, toEdge);
+    this.audio.escape();
+    this.hud.updateRemaining(this);
+  }
+
+  // Any RED (armed) arrow whose path is now clear leaves automatically; this
+  // can cascade as each exit frees the next.
+  _autoRelease() {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const id of Array.from(this.armed)) {
+        const a = this.board.arrows.get(id);
+        if (a && canEscape(this.board, a)) { this._release(a); changed = true; }
+      }
+    }
+    if (this.board.isCleared && this.state === GameState.PLAYING) this._win();
   }
 
   async requestHint() {
@@ -131,16 +155,22 @@ export class Game {
 
   buildDrawList() {
     const list = [];
+    const t = performance.now() / 1000;
     for (const a of this.board.allArrows()) {
       const v = this.animator.visualFor(a.id, a.dir);
       let color = COLORS.arrow;
-      if (v.shaking) color = COLORS.danger;
-      else if (this.animator.hintId === a.id) color = COLORS.hint;
+      let glow = v.glow;
+      if (this.armed.has(a.id)) {
+        color = COLORS.danger;                 // persistent red while blocked
+        glow = Math.max(glow, 0.25 + 0.2 * Math.sin(t * 5));
+      } else if (this.animator.hintId === a.id) {
+        color = COLORS.hint;
+      }
       const [ox, oy] = v.offset;
       list.push({
         points: a.cells.map((c) => ({ x: c.x + ox, y: c.y + oy })),
         dir: a.dir,
-        color, alpha: v.alpha, glow: v.glow,
+        color, alpha: v.alpha, glow,
       });
     }
     for (const g of this.animator.ghostDraws()) list.push(g);

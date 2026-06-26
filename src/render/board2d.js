@@ -67,8 +67,8 @@ export class Board2D {
     const ctx = this.ctx;
     const pts = item.points.map((p) => this.cellToScreen(p.x, p.y));
     const [ux, uy] = DIR_UNIT[item.dir];
-    const lineW = Math.max(1.5, this.cell * 0.085);
-    const headLen = this.cell * 0.3;
+    const lineW = Math.max(1.6, this.cell * 0.1);
+    const headLen = Math.max(5, this.cell * 0.42); // bigger, clearer head
 
     ctx.save();
     ctx.globalAlpha = item.alpha ?? 1;
@@ -78,33 +78,36 @@ export class Board2D {
     ctx.lineJoin = 'round';
     if (item.glow) { ctx.shadowColor = item.color || COLORS.hint; ctx.shadowBlur = item.glow * 18; }
 
-    // Body polyline. For a single-cell arrow, synthesize a short shaft.
-    let head;
+    // Body polyline. The head end stops one head-length short so the arrowhead
+    // sits cleanly at the tip. For a single cell we synthesize a short shaft.
+    let headCenter;
     if (pts.length >= 2) {
       ctx.beginPath();
       ctx.moveTo(pts[0][0], pts[0][1]);
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
       ctx.stroke();
-      head = pts[pts.length - 1];
+      headCenter = pts[pts.length - 1];
     } else {
       const c = pts[0];
-      const back = [c[0] - ux * this.cell * 0.32, c[1] - uy * this.cell * 0.32];
-      const front = [c[0] + ux * this.cell * 0.12, c[1] + uy * this.cell * 0.12];
+      const back = [c[0] - ux * this.cell * 0.34, c[1] - uy * this.cell * 0.34];
       ctx.beginPath();
       ctx.moveTo(back[0], back[1]);
-      ctx.lineTo(front[0], front[1]);
+      ctx.lineTo(c[0], c[1]);
       ctx.stroke();
-      head = front;
+      headCenter = c;
     }
 
-    // Chevron head pointing along dir.
+    // Arrowhead: tip pushed forward (toward the exit), bold chevron, so the
+    // exit direction is unmistakable.
+    const tip = [headCenter[0] + ux * headLen * 0.55, headCenter[1] + uy * headLen * 0.55];
+    const baseX = tip[0] - ux * headLen, baseY = tip[1] - uy * headLen;
     const px = -uy, py = ux;
-    const baseX = head[0] - ux * headLen, baseY = head[1] - uy * headLen;
+    ctx.lineWidth = lineW * 1.25;
     ctx.beginPath();
-    ctx.moveTo(head[0], head[1]);
-    ctx.lineTo(baseX + px * headLen * 0.7, baseY + py * headLen * 0.7);
-    ctx.moveTo(head[0], head[1]);
-    ctx.lineTo(baseX - px * headLen * 0.7, baseY - py * headLen * 0.7);
+    ctx.moveTo(tip[0], tip[1]);
+    ctx.lineTo(baseX + px * headLen * 0.62, baseY + py * headLen * 0.62);
+    ctx.moveTo(tip[0], tip[1]);
+    ctx.lineTo(baseX - px * headLen * 0.62, baseY - py * headLen * 0.62);
     ctx.stroke();
     ctx.restore();
   }
