@@ -67,48 +67,53 @@ export class Board2D {
     const ctx = this.ctx;
     const pts = item.points.map((p) => this.cellToScreen(p.x, p.y));
     const [ux, uy] = DIR_UNIT[item.dir];
-    const lineW = Math.max(1.6, this.cell * 0.1);
-    const headLen = Math.max(5, this.cell * 0.42); // bigger, clearer head
+    const lineW = Math.max(1.6, this.cell * 0.09);
 
+    // Head triangle dimensions.
+    const hl = Math.max(7, this.cell * 0.42); // length (tip to base)
+    const hw = Math.max(5, this.cell * 0.28); // half base width
+
+    const color = item.color || COLORS.arrow;
     ctx.save();
     ctx.globalAlpha = item.alpha ?? 1;
-    ctx.strokeStyle = item.color || COLORS.arrow;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
     ctx.lineWidth = lineW;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    if (item.glow) { ctx.shadowColor = item.color || COLORS.hint; ctx.shadowBlur = item.glow * 18; }
+    if (item.glow) { ctx.shadowColor = color; ctx.shadowBlur = item.glow * 18; }
 
-    // Body polyline. The head end stops one head-length short so the arrowhead
-    // sits cleanly at the tip. For a single cell we synthesize a short shaft.
-    let headCenter;
+    // Body polyline up to the head cell. The body stops a touch before the tip
+    // so the solid arrowhead sits cleanly at the front.
+    let hc; // head cell centre
     if (pts.length >= 2) {
       ctx.beginPath();
       ctx.moveTo(pts[0][0], pts[0][1]);
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
       ctx.stroke();
-      headCenter = pts[pts.length - 1];
+      hc = pts[pts.length - 1];
     } else {
       const c = pts[0];
-      const back = [c[0] - ux * this.cell * 0.34, c[1] - uy * this.cell * 0.34];
       ctx.beginPath();
-      ctx.moveTo(back[0], back[1]);
+      ctx.moveTo(c[0] - ux * this.cell * 0.36, c[1] - uy * this.cell * 0.36);
       ctx.lineTo(c[0], c[1]);
       ctx.stroke();
-      headCenter = c;
+      hc = c;
     }
 
-    // Arrowhead: tip pushed forward (toward the exit), bold chevron, so the
-    // exit direction is unmistakable.
-    const tip = [headCenter[0] + ux * headLen * 0.55, headCenter[1] + uy * headLen * 0.55];
-    const baseX = tip[0] - ux * headLen, baseY = tip[1] - uy * headLen;
+    // Solid triangle arrowhead — unmistakable direction.
     const px = -uy, py = ux;
-    ctx.lineWidth = lineW * 1.25;
+    const tip = [hc[0] + ux * hl * 0.62, hc[1] + uy * hl * 0.62];
+    const base = [hc[0] - ux * hl * 0.38, hc[1] - uy * hl * 0.38];
+    const b1 = [base[0] + px * hw, base[1] + py * hw];
+    const b2 = [base[0] - px * hw, base[1] - py * hw];
+    ctx.shadowBlur = item.glow ? item.glow * 18 : 0;
     ctx.beginPath();
     ctx.moveTo(tip[0], tip[1]);
-    ctx.lineTo(baseX + px * headLen * 0.62, baseY + py * headLen * 0.62);
-    ctx.moveTo(tip[0], tip[1]);
-    ctx.lineTo(baseX - px * headLen * 0.62, baseY - py * headLen * 0.62);
-    ctx.stroke();
+    ctx.lineTo(b1[0], b1[1]);
+    ctx.lineTo(b2[0], b2[1]);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   }
 
