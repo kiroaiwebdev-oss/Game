@@ -67,11 +67,11 @@ export class Board2D {
     const ctx = this.ctx;
     const pts = item.points.map((p) => this.cellToScreen(p.x, p.y));
     const [ux, uy] = DIR_UNIT[item.dir];
-    const lineW = Math.max(1.6, this.cell * 0.09);
+    const lineW = Math.max(1.8, this.cell * 0.1);
 
-    // Head triangle dimensions.
-    const hl = Math.max(7, this.cell * 0.42); // length (tip to base)
-    const hw = Math.max(5, this.cell * 0.28); // half base width
+    // Head triangle dimensions (generous so direction is obvious).
+    const hl = Math.max(8, this.cell * 0.5);  // length (tip to base)
+    const hw = Math.max(6, this.cell * 0.32); // half base width
 
     const color = item.color || COLORS.arrow;
     ctx.save();
