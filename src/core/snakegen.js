@@ -11,7 +11,7 @@
 //   mask cells. Removing in reverse-of-placement order is a valid solution, so
 //   every generated level is solvable by construction (verified by the solver).
 
-import { DIRS, VEC } from './dir2d.js';
+import { DIRS, VEC, OPPOSITE } from './dir2d.js';
 import { makeArrow, Board } from './board.js';
 import { isSolvable } from './escape2.js';
 import { makeRng, randInt, shuffle } from './rng.js';
@@ -95,39 +95,19 @@ function fillAttempt(mask, seed, maxLen) {
       while (x >= 0 && x < cols && y >= 0 && y < rows) { rayCells.add(key(x, y)); x += v.x; y += v.y; }
     }
 
-    // Grow a long space-filling body backward from the head. We pick the next
-    // cell with the FEWEST free neighbours (Warnsdorff-style) so the snake eats
-    // dead-ends first, leaving very few orphan single cells -> dense maze look.
+    // Grow a STRAIGHT body backward (opposite the head direction). Arrows are
+    // straight lines only -> clean, un-bent heads ("seedha"). Stops when the
+    // straight cell ahead isn't an empty mask cell.
     const chain = [{ x: best.x, y: best.y }]; // head first; reverse later
     const inChain = new Set([key(best.x, best.y)]);
+    const bv = VEC[OPPOSITE[bestDir]];
     let cur = best;
-    let lastDir = null;
-    const freeNeighbors = (cx, cy) => {
-      let n = 0;
-      for (const d of DIRS) {
-        const nx = cx + VEC[d].x, ny = cy + VEC[d].y, k = key(nx, ny);
-        if (cells.has(k) && !placed.has(k) && !inChain.has(k) && !rayCells.has(k)) n++;
-      }
-      return n;
-    };
     while (chain.length < maxLen) {
-      const cand = DIRS
-        .map((d) => ({ d, n: { x: cur.x + VEC[d].x, y: cur.y + VEC[d].y } }))
-        .filter((o) =>
-          cells.has(key(o.n.x, o.n.y)) &&
-          !placed.has(key(o.n.x, o.n.y)) &&
-          !inChain.has(key(o.n.x, o.n.y)) &&
-          !rayCells.has(key(o.n.x, o.n.y)));
-      if (cand.length === 0) break;
-      // Score: fewest onward free neighbours first; nudge toward straight runs.
-      for (const o of cand) {
-        o.score = freeNeighbors(o.n.x, o.n.y) * 2 + (o.d === lastDir ? -1 : 0) + rng() * 0.5;
-      }
-      cand.sort((a, b) => a.score - b.score);
-      const pick = cand[0];
-      cur = pick.n; lastDir = pick.d;
-      chain.push(cur);
-      inChain.add(key(cur.x, cur.y));
+      const n = { x: cur.x + bv.x, y: cur.y + bv.y };
+      const k = key(n.x, n.y);
+      if (cells.has(k) && !placed.has(k) && !inChain.has(k) && !rayCells.has(k)) {
+        chain.push(n); inChain.add(k); cur = n;
+      } else break;
     }
 
     const cellsTailToHead = chain.slice().reverse(); // tail .. head
@@ -197,13 +177,10 @@ export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 6, ma
   }
   if (!bestRaw) return { name: shape, shape, cols, rows, arrows: [], coverage: 0 };
 
-  // Try to merge single cells into corridors; keep only if still solvable.
-  const merged = mergeSingles(bestRaw);
-  const finalArrows = isSolvable(boardOf(cols, rows, merged)) ? merged : bestRaw;
-
+  // Keep arrows straight (no merging, which could create bends).
   return {
     name: shape, shape, cols, rows,
-    arrows: finalArrows.map((a) => ({ cells: a.cells, dir: a.dir })),
+    arrows: bestRaw.map((a) => ({ cells: a.cells, dir: a.dir })),
     coverage: bestCover / bestTotal,
   };
 }

@@ -23,8 +23,8 @@ export function buildLevels(count = 40) {
   for (let i = 0; i < count; i++) {
     // Dense maze from the start; grows bigger/denser with level.
     const size = Math.min(16, 9 + Math.floor(i / 3));
-    // Mix of long corridors and short arrows; lengthen slightly with level.
-    const maxLen = Math.min(8, 5 + Math.floor(i / 6));
+    // Short straight arrows -> many arrows, clean un-bent heads.
+    const maxLen = Math.min(5, 3 + Math.floor(i / 10));
     const shape = size < 11
       ? SIMPLE_SHAPES[i % SIMPLE_SHAPES.length]
       : RICH_SHAPES[i % RICH_SHAPES.length];
