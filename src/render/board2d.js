@@ -37,14 +37,17 @@ export class Board2D {
     if (this.canvas.width !== w || this.canvas.height !== h) {
       this.canvas.width = w; this.canvas.height = h;
     }
-    const topCss = 112, botCss = 108, sideCss = 16;
+    const topCss = 112, botCss = 108, sideCss = 18;
     const padTop = topCss * dpr, padBot = botCss * dpr, padSide = sideCss * dpr;
     const availW = w - padSide * 2;
     const availH = h - padTop - padBot;
-    this.cell = Math.max(6, Math.min(availW / this.cols, availH / this.rows));
+    // Cap the cell size so the board (and arrows) stay compact on big desktop
+    // screens, and centre it. On phones the fit-to-width path wins.
+    const maxCell = 40 * dpr;
+    this.cell = Math.max(6, Math.min(availW / this.cols, availH / this.rows, maxCell));
     const gridW = this.cell * this.cols, gridH = this.cell * this.rows;
     this.originX = (w - gridW) / 2;
-    this.originY = padTop + (availH - gridH) / 2;
+    this.originY = padTop + Math.max(0, (availH - gridH) / 2);
   }
 
   cellToScreen(x, y) {
@@ -64,8 +67,8 @@ export class Board2D {
     const ctx = this.ctx;
     const pts = item.points.map((p) => this.cellToScreen(p.x, p.y));
     const [ux, uy] = DIR_UNIT[item.dir];
-    const lineW = Math.max(2, this.cell * 0.15);
-    const headLen = this.cell * 0.36;
+    const lineW = Math.max(1.5, this.cell * 0.085);
+    const headLen = this.cell * 0.3;
 
     ctx.save();
     ctx.globalAlpha = item.alpha ?? 1;

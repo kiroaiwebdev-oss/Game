@@ -22,13 +22,14 @@ export function buildLevels(count = 30) {
   const specs = [];
   for (let i = 0; i < count; i++) {
     const shape = SHAPE_ORDER[i % SHAPE_ORDER.length];
-    const size = Math.min(17, 11 + Math.floor(i / 4));
+    // Denser grid -> smaller, more numerous arrows (maze-like look).
+    const size = Math.min(18, 12 + Math.floor(i / 3));
     specs.push({
       level: i + 1,
       shape,
       cols: size,
       rows: size + 1,
-      maxLen: 3 + (i % 3),
+      maxLen: 4 + (i % 3), // 4..6 cell winding snakes
       seed: 7000 + i * 131,
       lives: 3,
       difficulty: difficultyFor(i),

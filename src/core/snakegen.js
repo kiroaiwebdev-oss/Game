@@ -127,7 +127,7 @@ function fillAttempt(mask, seed, maxLen) {
 export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 4, mask }) {
   const m = mask;
   let bestDef = null, bestCover = -1;
-  for (let attempt = 0; attempt < 12; attempt++) {
+  for (let attempt = 0; attempt < 6; attempt++) {
     const { arrows, covered, total } = fillAttempt(m, seed + attempt * 101, maxLen);
     // Build a board to verify solvability.
     const b = new Board(cols, rows);
@@ -142,7 +142,7 @@ export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 4, ma
         arrows: arrows.map((a) => ({ cells: a.cells, dir: a.dir })),
         coverage: covered / total,
       };
-      if (covered === total) break;
+      if (covered / total >= 0.97) break; // good enough — stop early
     }
   }
   if (!bestDef) {
