@@ -29,7 +29,8 @@ export function buildLevels(count = 30) {
       shape,
       cols: size,
       rows: size + 1,
-      maxLen: 4 + (i % 3), // 4..6 cell winding snakes
+      // Long winding corridors -> connected maze look (scales with board).
+      maxLen: Math.min(16, Math.round(size * 0.9)),
       seed: 7000 + i * 131,
       lives: 3,
       difficulty: difficultyFor(i),

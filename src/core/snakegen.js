@@ -95,21 +95,37 @@ function fillAttempt(mask, seed, maxLen) {
       while (x >= 0 && x < cols && y >= 0 && y < rows) { rayCells.add(key(x, y)); x += v.x; y += v.y; }
     }
 
-    // Grow a bent body backward from the head into empty mask cells.
+    // Grow a long space-filling body backward from the head. We pick the next
+    // cell with the FEWEST free neighbours (Warnsdorff-style) so the snake eats
+    // dead-ends first, leaving very few orphan single cells -> dense maze look.
     const chain = [{ x: best.x, y: best.y }]; // head first; reverse later
     const inChain = new Set([key(best.x, best.y)]);
     let cur = best;
-    const targetLen = 1 + randInt(rng, 0, maxLen); // 1..maxLen
-    while (chain.length < targetLen) {
-      const opts = shuffle(rng, DIRS)
-        .map((d) => ({ x: cur.x + VEC[d].x, y: cur.y + VEC[d].y }))
-        .filter((n) =>
-          cells.has(key(n.x, n.y)) &&
-          !placed.has(key(n.x, n.y)) &&
-          !inChain.has(key(n.x, n.y)) &&
-          !rayCells.has(key(n.x, n.y)));
-      if (opts.length === 0) break;
-      cur = opts[0];
+    let lastDir = null;
+    const freeNeighbors = (cx, cy) => {
+      let n = 0;
+      for (const d of DIRS) {
+        const nx = cx + VEC[d].x, ny = cy + VEC[d].y, k = key(nx, ny);
+        if (cells.has(k) && !placed.has(k) && !inChain.has(k) && !rayCells.has(k)) n++;
+      }
+      return n;
+    };
+    while (chain.length < maxLen) {
+      const cand = DIRS
+        .map((d) => ({ d, n: { x: cur.x + VEC[d].x, y: cur.y + VEC[d].y } }))
+        .filter((o) =>
+          cells.has(key(o.n.x, o.n.y)) &&
+          !placed.has(key(o.n.x, o.n.y)) &&
+          !inChain.has(key(o.n.x, o.n.y)) &&
+          !rayCells.has(key(o.n.x, o.n.y)));
+      if (cand.length === 0) break;
+      // Score: fewest onward free neighbours first; nudge toward straight runs.
+      for (const o of cand) {
+        o.score = freeNeighbors(o.n.x, o.n.y) * 2 + (o.d === lastDir ? -1 : 0) + rng() * 0.5;
+      }
+      cand.sort((a, b) => a.score - b.score);
+      const pick = cand[0];
+      cur = pick.n; lastDir = pick.d;
       chain.push(cur);
       inChain.add(key(cur.x, cur.y));
     }
