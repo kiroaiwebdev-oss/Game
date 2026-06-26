@@ -7,7 +7,7 @@
 export const COLORS = {
   paper: '#e7d8bb',     // warm eye-comfort paper
   paperEdge: '#dccba8',
-  arrow: '#5b4a33',     // dark brown
+  arrow: '#3f3220',     // bold dark brown (reads almost black on paper)
   escape: '#3f7fcf',    // calm blue (selected / escaping = free path)
   danger: '#cf5648',    // soft red (blocked)
   hint: '#3f7fcf',
@@ -67,11 +67,11 @@ export class Board2D {
     const ctx = this.ctx;
     const pts = item.points.map((p) => this.cellToScreen(p.x, p.y));
     const [ux, uy] = DIR_UNIT[item.dir];
-    const lineW = Math.max(1.8, this.cell * 0.1);
+    const lineW = Math.max(2.5, this.cell * 0.2);   // THICK, bold corridors
 
-    // Head triangle dimensions (generous so direction is obvious).
-    const hl = Math.max(8, this.cell * 0.5);  // length (tip to base)
-    const hw = Math.max(6, this.cell * 0.32); // half base width
+    // Head triangle dimensions (bold, clearly wider than the line).
+    const hl = Math.max(9, this.cell * 0.56);  // length (tip to base)
+    const hw = Math.max(7, this.cell * 0.38);  // half base width
 
     const color = item.color || COLORS.arrow;
     ctx.save();

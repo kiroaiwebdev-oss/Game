@@ -21,11 +21,10 @@ function difficultyFor(i) {
 export function buildLevels(count = 40) {
   const specs = [];
   for (let i = 0; i < count; i++) {
-    // Grid grows gradually: small & clear early, big & complex later.
-    const size = Math.min(18, 6 + Math.floor(i / 2));
-    // Snakes start short (clear, simple ordering) and lengthen (more tangled).
-    const maxLen = Math.min(8, 3 + Math.floor(i / 4));
-    // Pick a shape appropriate to the current resolution.
+    // Dense maze from the start; grows bigger/denser with level.
+    const size = Math.min(16, 9 + Math.floor(i / 3));
+    // Mix of long corridors and short arrows; lengthen slightly with level.
+    const maxLen = Math.min(8, 5 + Math.floor(i / 6));
     const shape = size < 11
       ? SIMPLE_SHAPES[i % SIMPLE_SHAPES.length]
       : RICH_SHAPES[i % RICH_SHAPES.length];
@@ -33,7 +32,7 @@ export function buildLevels(count = 40) {
       level: i + 1,
       shape,
       cols: size,
-      rows: size + 1,
+      rows: size + 2,
       maxLen,
       seed: 7000 + i * 131,
       lives: 3,
