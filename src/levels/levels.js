@@ -1,27 +1,20 @@
 // levels.js
-// Produces the campaign. Levels are generated deterministically (seeded) so they
-// are reproducible AND guaranteed solvable, then enriched with a "lives" budget
-// scaled to difficulty. You can also hand-author levels by pushing plain defs.
+// Builds the 2D campaign: deterministic (seeded), guaranteed solvable, with a
+// lives budget and a difficulty label that scale with progression.
 
-import { generateCampaign } from '../core/levelgen.js';
+import { generateCampaign2D } from '../core/levelgen.js';
 
-export function buildLevels(count = 30) {
-  const defs = generateCampaign(count);
-  return defs.map((def, i) => ({
-    ...def,
-    // More forgiving early on; tighter later (min 3).
-    lives: Math.max(3, 6 - Math.floor(i / 8)),
-  }));
+function difficultyFor(index) {
+  if (index < 12) return 'Normal';
+  if (index < 28) return 'Hard';
+  return 'Expert';
 }
 
-// Example of a hand-authored level (kept for reference / future tuning):
-// {
-//   name: 'Tutorial',
-//   size: [3, 1, 1],
-//   lives: 5,
-//   blocks: [
-//     { x: 0, y: 0, z: 0, dir: 'NX' },
-//     { x: 1, y: 0, z: 0, dir: 'PX' },
-//     { x: 2, y: 0, z: 0, dir: 'PX' },
-//   ],
-// }
+export function buildLevels(count = 40) {
+  const defs = generateCampaign2D(count);
+  return defs.map((def, i) => ({
+    ...def,
+    lives: Math.max(3, 5 - Math.floor(i / 14)),
+    difficulty: difficultyFor(i),
+  }));
+}

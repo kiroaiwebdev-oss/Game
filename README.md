@@ -1,16 +1,16 @@
-# Arrow Puzzle — 3D Tap-Away Game
+# Arrow Puzzle — 2D Tap-Away Game
 
-A relaxing 3D logic puzzle. Tap arrows to clear the board: an arrow can only leave
-when its straight path to the edge of the volume is free. Built as a **fully
-self-contained, zero-dependency** HTML5 + JavaScript + WebGL game so it is accepted
-by every web game portal (no external CDN, no build step required, tiny size, instant load).
+A relaxing 2D logic puzzle. Tap arrows to clear the board: an arrow can only leave
+when its straight path to the edge of the grid is free. Built as a **fully
+self-contained, zero-dependency** HTML5 + JavaScript game (crisp Canvas 2D vector
+art) so it is accepted by every web game portal (no external CDN, no build step
+required, tiny size, instant load).
 
 ## How to play
-- **Tap** an arrow to make it fly out in its direction.
-- It escapes only if nothing blocks its path to the edge — otherwise you lose a life.
-- **Drag** to rotate the camera, **scroll / pinch** to zoom.
-- **Hint** highlights an arrow that can safely escape right now (gated by a rewarded ad on ad-enabled portals).
-- Clear the whole board to win. Levels rise in difficulty and are **guaranteed solvable**.
+- **Tap** an arrow to send it off the board in its direction.
+- It leaves only if nothing blocks its path to the edge — otherwise you lose a life.
+- **Hint** (💡) highlights an arrow that can safely escape right now (free hint first, then a rewarded ad on ad-enabled portals).
+- Clear every arrow to win. Levels rise in difficulty (Normal → Hard → Expert) and are **guaranteed solvable**.
 
 ## Run locally
 ```bash
@@ -22,16 +22,16 @@ Open the URL in a browser. Append `?platform=NAME` to test a specific adapter
 
 ## Run tests (core logic)
 ```bash
-npm test           # escape rule, solver, hint, guaranteed-solvable generator
+npm test           # escape rule, solver, hint, guaranteed-solvable 2D generator
 ```
 
 ## Project structure
 ```
 src/
-  core/      pure game logic (no DOM/WebGL) — direction, grid, escape rules, solver, level generator
-  render/    zero-dependency WebGL engine — math, shaders, cube+arrow geometry, orbit camera, picking
+  core/      pure game logic (no DOM) — direction, grid, escape rules, solver, level generator
+  render/    board2d.js — clean Canvas 2D renderer (dotted grid + chevron arrows + exit trails)
   game/      controller, animations, audio, input
-  ui/        DOM HUD (lives, hint, menus, win/lose)
+  ui/        DOM HUD (level, lives, hint, difficulty, menus, win/lose)
   levels/    campaign builder
   platform/  SDK ADAPTER LAYER (one file per portal)
 tools/       dev server + per-platform build script
@@ -69,6 +69,6 @@ Each `dist/<platform>/` folder is self-contained — **zip it and upload**.
 > still runs and rewarded actions are granted, so a build is never "broken".
 
 ## Why this stack is never rejected
-- **Plain HTML5 + JS + WebGL** — the universal standard every portal accepts.
+- **Plain HTML5 + JS + Canvas 2D** — the universal standard every portal accepts.
 - **No external dependencies** — no CDN/npm at runtime; works offline; passes strict size/load checks.
 - **Single folder** (`index.html` + `styles.css` + `src/`) — exactly the format portals expect.

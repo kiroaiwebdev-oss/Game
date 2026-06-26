@@ -4,7 +4,7 @@
 import { DIRECTIONS } from '../src/core/direction.js';
 import { Grid, makeBlock, gridFromLevel, resetIdCounter } from '../src/core/grid.js';
 import { canEscape, solve, isSolvable, findHint, escapableBlocks } from '../src/core/rules.js';
-import { generateLevel, generateCampaign } from '../src/core/levelgen.js';
+import { generateLevel, generateCampaign, generateCampaign2D } from '../src/core/levelgen.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -92,6 +92,27 @@ console.log('== Campaign ==');
   check('all campaign levels solvable', ok);
   check('difficulty rises (last >= first blocks)',
     camp[camp.length - 1].blocks.length >= camp[0].blocks.length);
+}
+
+console.log('== 2D Campaign ==');
+{
+  const camp = generateCampaign2D(40);
+  check('2D campaign has 40 levels', camp.length === 40);
+  let solvable = true;
+  let flat = true;
+  let onlyFourDirs = true;
+  const FOUR = new Set([DIRECTIONS.PX, DIRECTIONS.NX, DIRECTIONS.PY, DIRECTIONS.NY]);
+  for (const def of camp) {
+    if (!isSolvable(gridFromLevel(def))) solvable = false;
+    if (def.size[2] !== 1) flat = false;
+    for (const b of def.blocks) {
+      if (!FOUR.has(b.dir)) onlyFourDirs = false;
+      if (b.z !== 0) flat = false;
+    }
+  }
+  check('all 2D levels solvable', solvable);
+  check('all 2D levels are flat (depth 1)', flat);
+  check('2D levels use only 4 directions', onlyFourDirs);
 }
 
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);

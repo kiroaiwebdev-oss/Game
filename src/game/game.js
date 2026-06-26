@@ -1,34 +1,26 @@
-// game.js
-// The game controller. Wires the model (grid/rules), the renderer (scene/camera),
-// animations, audio, the HUD, and the platform adapter into one playable loop.
+// game.js (2D Arrow Puzzle controller)
+// Wires the model (grid/rules), the 2D board renderer, animations, audio,
+// the HUD and the platform adapter into one playable loop.
 
 import { gridFromLevel } from '../core/grid.js';
 import { canEscape, findHint } from '../core/rules.js';
-import { dirAxis } from '../core/direction.js';
-import { OrbitCamera } from '../render/camera.js';
-import { Scene, AXIS_COLORS, PICK_HALF } from '../render/scene.js';
-import { pickBlock } from '../render/picker.js';
+import { dirVector } from '../core/direction.js';
+import { Board2D, COLORS } from '../render/board2d.js';
 import { Animator } from './animator.js';
 
-const SHAKE_RED = [0.95, 0.3, 0.3];
-
 export const GameState = Object.freeze({
-  MENU: 'menu',
-  PLAYING: 'playing',
-  WON: 'won',
-  LOST: 'lost',
+  MENU: 'menu', PLAYING: 'playing', WON: 'won', LOST: 'lost',
 });
 
 export class Game {
-  constructor({ gl, canvas, levels, audio, adapter, hud }) {
+  constructor({ canvas, levels, audio, adapter, hud }) {
     this.canvas = canvas;
     this.levels = levels;
     this.audio = audio;
     this.adapter = adapter;
     this.hud = hud;
 
-    this.scene = new Scene(gl, canvas);
-    this.camera = new OrbitCamera([0, 0, 0]);
+    this.board = new Board2D(canvas);
     this.animator = new Animator();
 
     this.state = GameState.MENU;
@@ -36,17 +28,12 @@ export class Game {
     this.grid = null;
     this.lives = 0;
     this.maxLives = 3;
-    this.busy = false; // blocks input during transitions
-
+    this.busy = false;
     this._running = false;
   }
 
-  // ---- Lifecycle ----
   start() {
-    if (!this._running) {
-      this._running = true;
-      this._loop();
-    }
+    if (!this._running) { this._running = true; this._loop(); }
   }
 
   loadLevel(index) {
@@ -55,12 +42,8 @@ export class Game {
     this.grid = gridFromLevel(def);
     this.maxLives = def.lives || 3;
     this.lives = this.maxLives;
-    this.scene.setGridSize(def.size[0], def.size[1], def.size[2]);
-    // Fit the camera radius to the level size.
-    const maxDim = Math.max(...def.size);
-    this.camera.radius = Math.min(this.camera.maxRadius, 5 + maxDim * 1.4);
-    this.camera.azimuth = Math.PI * 0.25;
-    this.camera.elevation = Math.PI * 0.22;
+    this.hints = 1; // free hints this level; more via rewarded ad
+    this.board.setGrid(def.size[0], def.size[1]);
     this.animator.reset();
     this.animator.spawnAll(this.grid.allBlocks());
     this.state = GameState.PLAYING;
@@ -69,36 +52,32 @@ export class Game {
     this.hud.onLevelStart(this);
   }
 
-  // ---- Helpers ----
-  colorFor(block) {
-    return AXIS_COLORS[dirAxis(block.dir)];
+  // Cells from a block to where it leaves the board (used for the exit trail).
+  _cellsToEdge(block) {
+    const v = dirVector(block.dir);
+    let n = 0;
+    let x = block.x + v.x, y = block.y + v.y, z = block.z + v.z;
+    while (this.grid.inBounds(x, y, z)) { n++; x += v.x; y += v.y; z += v.z; }
+    return n;
   }
 
-  _pickItems() {
-    return this.grid.allBlocks().map((b) => ({
-      block: b,
-      worldCenter: this.scene.worldCenter(b.x, b.y, b.z),
-    }));
-  }
-
-  // ---- Input handlers (called by input.js) ----
-  handleOrbit(dAz, dEl) { this.camera.orbit(dAz, dEl); }
-  handleZoom(factor) { this.camera.zoom(factor); }
-
-  handleTap(ndcX, ndcY) {
+  // ---- input ----
+  handleTap(cssX, cssY) {
     if (this.state !== GameState.PLAYING || this.busy) return;
-    const aspect = this.canvas.width / this.canvas.height;
-    const { origin, dir } = this.camera.screenRay(ndcX, ndcY, aspect);
-    const block = pickBlock(this._pickItems(), origin, dir, PICK_HALF);
+    const cell = this.board.screenToCell(cssX, cssY);
+    if (!cell) return;
+    const block = this.grid.at(cell.x, cell.y, 0);
     if (!block) return;
+
     this.audio.tap();
     this.animator.clearHint();
 
     if (canEscape(this.grid, block)) {
-      const color = this.colorFor(block);
+      const toEdge = this._cellsToEdge(block);
       this.grid.removeBlock(block);
-      this.animator.escape(block, color);
+      this.animator.escape(block, toEdge);
       this.audio.escape();
+      this.hud.updateRemaining(this);
       if (this.grid.isCleared) this._win();
     } else {
       this.animator.shake(block.id);
@@ -109,40 +88,43 @@ export class Game {
     }
   }
 
-  // ---- Hint (gated by a rewarded ad on real platforms) ----
+  // ---- hint (free hint first, then rewarded-ad gated on ad platforms) ----
   async requestHint() {
     if (this.state !== GameState.PLAYING || this.busy) return;
-    const hint = findHint(this.grid);
-    if (!hint) return; // nothing escapable (shouldn't happen on solvable boards)
+    if (!findHint(this.grid)) return;
+
+    // Free hint available -> use it directly.
+    if (this.hints > 0) {
+      this.hints -= 1;
+      this.hud.updateHints(this);
+      this._giveHint();
+      return;
+    }
+
+    // Otherwise offer a rewarded ad to earn one.
     this.busy = true;
     this.hud.setHintPending(true);
     let granted = true;
-    try {
-      granted = await this.adapter.showRewarded();
-    } catch (_) {
-      granted = true;
-    }
+    try { granted = await this.adapter.showRewarded(); } catch (_) { granted = true; }
     this.hud.setHintPending(false);
     this.busy = false;
-    if (granted) {
-      // Re-evaluate after the ad in case the board changed (it can't here, but safe).
-      const fresh = findHint(this.grid);
-      if (fresh) {
-        this.animator.setHint(fresh.id);
-        this.audio.hint();
-      }
-    }
+    if (granted) this._giveHint();
   }
 
-  // ---- Win / Lose ----
-  async _win() {
+  _giveHint() {
+    const fresh = findHint(this.grid);
+    if (fresh) { this.animator.setHint(fresh.id); this.audio.hint(); }
+  }
+
+  // ---- win / lose / flow ----
+  _win() {
     this.state = GameState.WON;
     this.busy = true;
     this.audio.win();
     this.adapter.gameplayStop();
     this.adapter.happyTime();
     saveProgress(this.levelIndex + 1);
-    setTimeout(() => this.hud.showWin(this), 700);
+    setTimeout(() => this.hud.showWin(this), 650);
   }
 
   _lose() {
@@ -150,40 +132,33 @@ export class Game {
     this.busy = true;
     this.audio.lose();
     this.adapter.gameplayStop();
-    setTimeout(() => this.hud.showLose(this), 500);
+    setTimeout(() => this.hud.showLose(this), 450);
   }
 
   async nextLevel() {
     const next = this.levelIndex + 1;
-    if (next >= this.levels.length) {
-      this.hud.showAllComplete(this);
-      return;
-    }
+    if (next >= this.levels.length) { this.hud.showAllComplete(this); return; }
     try { await this.adapter.showInterstitial(); } catch (_) {}
     this.loadLevel(next);
   }
 
   retryLevel() { this.loadLevel(this.levelIndex); }
 
-  // ---- Render loop ----
+  // ---- render ----
   buildDrawList() {
     const list = [];
-    if (this.grid) {
-      for (const b of this.grid.allBlocks()) {
-        const v = this.animator.visualFor(b.id);
-        let color = this.colorFor(b);
-        if (v.shaking) color = SHAKE_RED;
-        list.push({
-          x: b.x, y: b.y, z: b.z, dir: b.dir,
-          color,
-          extra: v.extra,
-          scale: v.scale,
-          emissive: v.emissive,
-          alpha: 1,
-        });
-      }
+    for (const b of this.grid.allBlocks()) {
+      const v = this.animator.visualFor(b.id);
+      let color = COLORS.arrow;
+      if (v.shaking) color = COLORS.danger;
+      else if (this.animator.hintId === b.id) color = COLORS.accent;
+      list.push({
+        x: b.x, y: b.y, dir: b.dir,
+        color,
+        dxCells: v.dxCells, dyCells: v.dyCells,
+        scale: v.scale, glow: v.glow, alpha: 1,
+      });
     }
-    // Add flying-off ghosts.
     for (const g of this.animator.ghostDraws()) list.push(g);
     return list;
   }
@@ -192,15 +167,14 @@ export class Game {
     const frame = () => {
       if (!this._running) return;
       this.animator.update();
-      const list = this.grid ? this.buildDrawList() : [];
-      this.scene.render(this.camera, list);
+      if (this.grid) this.board.render(this.buildDrawList());
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
   }
 }
 
-// ---- Progress persistence ----
+// ---- progress persistence ----
 const PROGRESS_KEY = 'arrowpuzzle.progress';
 export function loadProgress() {
   try {
