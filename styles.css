@@ -1,0 +1,133 @@
+/* Calming, minimalist UI. The 3D scene fills the screen; the HUD floats above. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-top: #1a2a44;
+  --bg-bottom: #0b1220;
+  --text: #eaf0fb;
+  --accent: #6db5ff;
+  --accent-2: #7be0a4;
+  --card-bg: rgba(18, 26, 42, 0.92);
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(120% 120% at 50% 0%, var(--bg-top) 0%, var(--bg-bottom) 70%);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: none;
+}
+
+#app { position: relative; }
+
+#game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* let drags pass to canvas; buttons re-enable below */
+}
+
+.hud-topbar {
+  position: absolute;
+  top: env(safe-area-inset-top, 0);
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+}
+
+.hud-level {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.hud-lives { display: flex; gap: 4px; font-size: 20px; }
+.heart { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+
+.btn {
+  pointer-events: auto;
+  cursor: pointer;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 22px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.12s ease, background 0.2s ease, opacity 0.2s ease;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.18); }
+.btn:active { transform: scale(0.96); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #07101f;
+}
+
+.hint-btn {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0) + 22px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.hint-btn:active { transform: translateX(-50%) scale(0.96); }
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 9, 18, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  pointer-events: auto;
+  transition: opacity 0.25s ease;
+}
+.overlay.hidden { opacity: 0; pointer-events: none; }
+
+.card {
+  width: min(86vw, 420px);
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  padding: 30px 26px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.card-title {
+  font-size: 30px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.card-msg {
+  font-size: 15px;
+  line-height: 1.55;
+  opacity: 0.85;
+  margin-bottom: 22px;
+}
+.card-buttons { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.card-buttons .btn { width: 100%; max-width: 260px; }
+
+.hidden { display: none !important; }
