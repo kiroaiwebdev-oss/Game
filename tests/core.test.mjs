@@ -67,7 +67,7 @@ console.log('== Shape generation: solvable + good coverage ==');
     for (let s = 0; s < 4; s++) {
       const cols = 13, rows = 14;
       const mask = makeMask(shape, cols, rows);
-      const def = generateShapeLevel({ shape, cols, rows, mask, maxLen: 4, seed: 100 + s * 17 });
+      const def = generateShapeLevel({ shape, cols, rows, mask, maxLen: 6, seed: 100 + s * 17 });
       const b = boardFromLevel(def);
       if (!isSolvable(b)) allSolvable = false;
       total++; sumCover += def.coverage;

@@ -7,8 +7,8 @@ import { makeMask } from '../core/masks.js';
 import { generateShapeLevel } from '../core/snakegen.js';
 
 const SHAPE_ORDER = [
-  'heart', 'diamond', 'star', 'butterfly', 'arrow', 'circle',
-  'cross', 'triangle', 'ring', 'square', 'star', 'heart', 'full',
+  'full', 'heart', 'star', 'diamond', 'butterfly', 'full', 'circle',
+  'triangle', 'cross', 'arrow', 'ring', 'full', 'star', 'heart',
 ];
 
 function difficultyFor(i) {
@@ -29,8 +29,8 @@ export function buildLevels(count = 30) {
       shape,
       cols: size,
       rows: size + 1,
-      // Long winding corridors -> connected maze look (scales with board).
-      maxLen: Math.min(16, Math.round(size * 0.9)),
+      // Medium winding corridors + merge => many connected maze lines.
+      maxLen: 6,
       seed: 7000 + i * 131,
       lives: 3,
       difficulty: difficultyFor(i),

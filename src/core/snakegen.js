@@ -135,35 +135,75 @@ function fillAttempt(mask, seed, maxLen) {
     arrows.push(makeArrow(cellsTailToHead, bestDir));
   }
 
-  return { arrows, covered: placed.size, total: cells.size };
+  // Raw arrows here are ALWAYS solvable (reverse construction). Merging happens
+  // later, guarded by a solvability re-check.
+  return {
+    arrows: arrows.map((a) => ({ cells: a.cells, dir: a.dir })),
+    covered: placed.size, total: cells.size,
+  };
+}
+
+// Absorb leftover single-cell arrows into a neighbouring arrow's TAIL so the
+// board reads as long connected corridors. Returns a NEW arrow list (the input
+// is untouched) so the caller can revert if the merge ever hurts solvability.
+function mergeSingles(arrows) {
+  const out = arrows.map((a) => ({ cells: a.cells.map((c) => ({ x: c.x, y: c.y })), dir: a.dir }));
+  const cellArrow = new Map();
+  for (const a of out) for (const c of a.cells) cellArrow.set(key(c.x, c.y), a);
+  let merged = true;
+  while (merged) {
+    merged = false;
+    for (let i = out.length - 1; i >= 0; i--) {
+      const a = out[i];
+      if (a.cells.length !== 1) continue;
+      const c = a.cells[0];
+      let attached = false;
+      for (const d of DIRS) {
+        const n = { x: c.x + VEC[d].x, y: c.y + VEC[d].y };
+        const A = cellArrow.get(key(n.x, n.y));
+        if (A && A !== a) {
+          const tail = A.cells[0];
+          if (tail.x === n.x && tail.y === n.y) {
+            A.cells.unshift({ x: c.x, y: c.y });
+            cellArrow.set(key(c.x, c.y), A);
+            attached = true; break;
+          }
+        }
+      }
+      if (attached) { out.splice(i, 1); merged = true; }
+    }
+  }
+  return out;
+}
+
+function boardOf(cols, rows, arrows) {
+  const b = new Board(cols, rows);
+  for (const a of arrows) b.addArrow(makeArrow(a.cells, a.dir));
+  return b;
 }
 
 // Generate a solvable, mostly-complete shape level.
 // Returns a level def: { name, cols, rows, arrows:[{cells,dir}], shape }.
-export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 4, mask }) {
+export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 6, mask }) {
   const m = mask;
-  let bestDef = null, bestCover = -1;
+  let bestRaw = null, bestCover = -1, bestTotal = 1;
   for (let attempt = 0; attempt < 6; attempt++) {
     const { arrows, covered, total } = fillAttempt(m, seed + attempt * 101, maxLen);
-    // Build a board to verify solvability.
-    const b = new Board(cols, rows);
-    for (const a of arrows) b.addArrow(a);
-    if (!isSolvable(b)) continue;
+    if (!isSolvable(boardOf(cols, rows, arrows))) continue; // safety (always true)
     if (covered > bestCover) {
-      bestCover = covered;
-      bestDef = {
-        name: shape,
-        shape,
-        cols, rows,
-        arrows: arrows.map((a) => ({ cells: a.cells, dir: a.dir })),
-        coverage: covered / total,
-      };
-      if (covered / total >= 0.97) break; // good enough — stop early
+      bestCover = covered; bestTotal = total; bestRaw = arrows;
+      if (covered / total >= 0.985) break;
     }
   }
-  if (!bestDef) {
-    // Extremely unlikely fallback: a single 1-cell arrow.
-    bestDef = { name: shape, shape, cols, rows, arrows: [], coverage: 0 };
-  }
-  return bestDef;
+  if (!bestRaw) return { name: shape, shape, cols, rows, arrows: [], coverage: 0 };
+
+  // Try to merge single cells into corridors; keep only if still solvable.
+  const merged = mergeSingles(bestRaw);
+  const finalArrows = isSolvable(boardOf(cols, rows, merged)) ? merged : bestRaw;
+
+  return {
+    name: shape, shape, cols, rows,
+    arrows: finalArrows.map((a) => ({ cells: a.cells, dir: a.dir })),
+    coverage: bestCover / bestTotal,
+  };
 }
