@@ -1,118 +1,82 @@
-// Core logic tests, runnable with: node tests/core.test.mjs
-// No test framework needed — a tiny assert harness keeps it dependency-free.
-
-import { DIRECTIONS } from '../src/core/direction.js';
-import { Grid, makeBlock, gridFromLevel, resetIdCounter } from '../src/core/grid.js';
-import { canEscape, solve, isSolvable, findHint, escapableBlocks } from '../src/core/rules.js';
-import { generateLevel, generateCampaign, generateCampaign2D } from '../src/core/levelgen.js';
+// Core logic tests for the snake-arrow model. Run: node tests/core.test.mjs
+import { Board, makeArrow, boardFromLevel, resetArrowId } from '../src/core/board.js';
+import { canEscape, solve, isSolvable, findHint } from '../src/core/escape2.js';
+import { makeMask, MASK_NAMES } from '../src/core/masks.js';
+import { generateShapeLevel } from '../src/core/snakegen.js';
 
 let pass = 0, fail = 0;
-function check(name, cond) {
-  if (cond) { pass++; console.log(`  ok  - ${name}`); }
-  else { fail++; console.error(`  FAIL- ${name}`); }
+const check = (n, v) => { v ? (pass++, console.log(`  ok  - ${n}`)) : (fail++, console.error(`  FAIL- ${n}`)); };
+
+console.log('== Escape rule (snake) ==');
+{
+  resetArrowId();
+  // Board 4x1. Arrow A occupies cell (1) head facing R; arrow B at (2) facing R.
+  const b = new Board(4, 1);
+  const A = b.addArrow(makeArrow([{ x: 0, y: 0 }, { x: 1, y: 0 }], 'R')); // head at (1)
+  const B = b.addArrow(makeArrow([{ x: 2, y: 0 }], 'R'));                  // head at (2)
+  check('A blocked by B ahead', canEscape(b, A) === false);
+  check('B has clear path right', canEscape(b, B) === true);
 }
 
-console.log('== Escape rule ==');
+console.log('== Solver: solvable ==');
 {
-  resetIdCounter();
-  // 3x1x1 row. Block at x=0 pointing +X is blocked by x=1; x=1 pointing +X can escape.
-  const g = new Grid(3, 1, 1);
-  const a = g.addBlock(makeBlock(0, 0, 0, DIRECTIONS.PX));
-  const b = g.addBlock(makeBlock(1, 0, 0, DIRECTIONS.PX));
-  check('blocked block cannot escape', canEscape(g, a) === false);
-  check('clear block can escape', canEscape(g, b) === true);
-  // Block a pointing -X (toward edge, nothing behind) can escape.
-  const c = makeBlock(0, 0, 0, DIRECTIONS.NX);
-  const g2 = new Grid(3, 1, 1);
-  g2.addBlock(c);
-  g2.addBlock(makeBlock(2, 0, 0, DIRECTIONS.PX));
-  check('block escaping toward open edge works', canEscape(g2, c) === true);
-}
-
-console.log('== Solver: solvable chain ==');
-{
-  resetIdCounter();
-  // A solvable line: tap b (escapes +X), then a (escapes +X).
-  const def = { size: [3, 1, 1], blocks: [
-    { x: 0, y: 0, z: 0, dir: DIRECTIONS.PX },
-    { x: 1, y: 0, z: 0, dir: DIRECTIONS.PX },
+  resetArrowId();
+  const def = { cols: 4, rows: 1, arrows: [
+    { cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }], dir: 'R' },
+    { cells: [{ x: 2, y: 0 }], dir: 'R' },
   ]};
-  const g = gridFromLevel(def);
-  const res = solve(g);
-  check('chain is solvable', res.solvable === true);
-  check('solve does not mutate original grid', g.remaining === 2);
+  const b = boardFromLevel(def);
+  const res = solve(b);
+  check('chain solvable', res.solvable === true);
+  check('solve does not mutate original', b.remaining === 2);
 }
 
-console.log('== Solver: unsolvable deadlock ==');
+console.log('== Solver: deadlock ==');
 {
-  resetIdCounter();
-  // Two blocks pointing INTO each other across a 2x1x1: each blocks the other.
-  const def = { size: [2, 1, 1], blocks: [
-    { x: 0, y: 0, z: 0, dir: DIRECTIONS.PX }, // wants to go right, blocked by other
-    { x: 1, y: 0, z: 0, dir: DIRECTIONS.NX }, // wants to go left, blocked by other
+  resetArrowId();
+  const def = { cols: 2, rows: 1, arrows: [
+    { cells: [{ x: 0, y: 0 }], dir: 'R' }, // blocked by other
+    { cells: [{ x: 1, y: 0 }], dir: 'L' }, // blocked by other
   ]};
-  const g = gridFromLevel(def);
-  const res = solve(g);
-  check('mutual block is UNsolvable', res.solvable === false);
-  check('unsolvable leaves blocks remaining', res.remaining === 2);
+  const res = solve(boardFromLevel(def));
+  check('mutual block UNsolvable', res.solvable === false);
 }
 
 console.log('== Hint ==');
 {
-  resetIdCounter();
-  const def = { size: [3, 1, 1], blocks: [
-    { x: 0, y: 0, z: 0, dir: DIRECTIONS.PX },
-    { x: 1, y: 0, z: 0, dir: DIRECTIONS.PX },
-  ]};
-  const g = gridFromLevel(def);
-  const hint = findHint(g);
-  check('hint returns an escapable block', hint !== null && canEscape(g, hint));
+  resetArrowId();
+  const b = boardFromLevel({ cols: 3, rows: 1, arrows: [
+    { cells: [{ x: 0, y: 0 }], dir: 'R' }, { cells: [{ x: 1, y: 0 }], dir: 'R' },
+  ]});
+  const h = findHint(b);
+  check('hint is escapable', h !== null && canEscape(b, h));
 }
 
-console.log('== Generator: guaranteed solvable ==');
+console.log('== Masks ==');
 {
-  let allSolvable = true;
-  let allHavePlay = true;
-  for (let seed = 1; seed <= 60; seed++) {
-    const def = generateLevel({ size: [4, 4, 3], fillRatio: 0.7, seed });
-    const g = gridFromLevel(def);
-    if (!isSolvable(g)) allSolvable = false;
-    if (def.blocks.length === 0 || escapableBlocks(g).length === 0) allHavePlay = false;
-  }
-  check('60 generated levels are all solvable', allSolvable);
-  check('generated levels are non-empty and playable', allHavePlay);
+  const heart = makeMask('heart', 13, 14);
+  check('heart mask non-empty', heart.cells.size > 20);
+  const all = makeMask('full', 10, 10);
+  check('full mask fills grid', all.cells.size === 100);
 }
 
-console.log('== Campaign ==');
+console.log('== Shape generation: solvable + good coverage ==');
 {
-  const camp = generateCampaign(30);
-  check('campaign has 30 levels', camp.length === 30);
-  let ok = true;
-  for (const def of camp) if (!isSolvable(gridFromLevel(def))) ok = false;
-  check('all campaign levels solvable', ok);
-  check('difficulty rises (last >= first blocks)',
-    camp[camp.length - 1].blocks.length >= camp[0].blocks.length);
-}
-
-console.log('== 2D Campaign ==');
-{
-  const camp = generateCampaign2D(40);
-  check('2D campaign has 40 levels', camp.length === 40);
-  let solvable = true;
-  let flat = true;
-  let onlyFourDirs = true;
-  const FOUR = new Set([DIRECTIONS.PX, DIRECTIONS.NX, DIRECTIONS.PY, DIRECTIONS.NY]);
-  for (const def of camp) {
-    if (!isSolvable(gridFromLevel(def))) solvable = false;
-    if (def.size[2] !== 1) flat = false;
-    for (const b of def.blocks) {
-      if (!FOUR.has(b.dir)) onlyFourDirs = false;
-      if (b.z !== 0) flat = false;
+  let allSolvable = true, lowCover = 0, total = 0, sumCover = 0;
+  for (const shape of MASK_NAMES) {
+    for (let s = 0; s < 4; s++) {
+      const cols = 13, rows = 14;
+      const mask = makeMask(shape, cols, rows);
+      const def = generateShapeLevel({ shape, cols, rows, mask, maxLen: 4, seed: 100 + s * 17 });
+      const b = boardFromLevel(def);
+      if (!isSolvable(b)) allSolvable = false;
+      total++; sumCover += def.coverage;
+      if (def.coverage < 0.9) lowCover++;
     }
   }
-  check('all 2D levels solvable', solvable);
-  check('all 2D levels are flat (depth 1)', flat);
-  check('2D levels use only 4 directions', onlyFourDirs);
+  check('all generated shapes solvable', allSolvable);
+  check('avg coverage >= 0.97', (sumCover / total) >= 0.97);
+  check('few low-coverage levels', lowCover <= 1);
 }
 
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);

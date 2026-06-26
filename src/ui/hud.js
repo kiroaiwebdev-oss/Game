@@ -4,8 +4,8 @@
 // difficulty), bottom round buttons (hint · restart), and a modal card for
 // menu / win / lose screens. Pure DOM, no framework.
 
-const HEART_FULL = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 21s-7.5-4.6-10-9.2C.4 8.3 2 4.8 5.3 4.8c2 0 3.3 1.2 4.7 3 1.4-1.8 2.7-3 4.7-3 3.3 0 4.9 3.5 3.3 7C19.5 16.4 12 21 12 21z" fill="#ff5a6e"/></svg>`;
-const HEART_EMPTY = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 21s-7.5-4.6-10-9.2C.4 8.3 2 4.8 5.3 4.8c2 0 3.3 1.2 4.7 3 1.4-1.8 2.7-3 4.7-3 3.3 0 4.9 3.5 3.3 7C19.5 16.4 12 21 12 21z" fill="none" stroke="#d4dbe8" stroke-width="1.6"/></svg>`;
+const DROP_FULL = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#4a90d9"/></svg>`;
+const DROP_EMPTY = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#d8c8a6"/></svg>`;
 
 export class Hud {
   constructor(root) {
@@ -84,11 +84,11 @@ export class Hud {
   updateLives(game) {
     this.hearts.innerHTML = '';
     for (let i = 0; i < game.maxLives; i++) {
-      this._el('span', 'heart', this.hearts, i < game.lives ? HEART_FULL : HEART_EMPTY);
+      this._el('span', 'heart', this.hearts, i < game.lives ? DROP_FULL : DROP_EMPTY);
     }
   }
   updateRemaining(game) {
-    this.remainChip.innerHTML = `<span class="grid-glyph">&#9638;</span> ${game.grid.remaining}`;
+    this.remainChip.innerHTML = `<span class="grid-glyph">&#9638;</span> ${game.board.remaining}`;
   }
   updateHints(game) {
     const badge = this.hintBtn.querySelector('.round-badge');
