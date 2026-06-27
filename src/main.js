@@ -29,6 +29,17 @@ async function boot() {
   game.start();
   adapter.loadingStop();
 
+  // Yandex/general: pause audio when the tab/window loses focus (req. 1.3).
+  document.addEventListener('visibilitychange', () => {
+    audio.setPageHidden(document.hidden);
+  });
+  window.addEventListener('blur', () => audio.setPageHidden(true));
+  window.addEventListener('focus', () => audio.setPageHidden(false));
+
+  // Disable the browser context menu inside the game area (Yandex req. 1.6.1.8):
+  // right-click / long-press must not pop the system menu over the canvas.
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
   // Pre-roll ad on Play (GD best practice: ad on the splash/Play button), then
   // start. On itch.io/local this resolves instantly (no ad).
   hud.showMenu(async () => {

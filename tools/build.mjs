@@ -44,6 +44,8 @@ const HEAD_INJECT = {
     fjs.parentNode.insertBefore(js, fjs);
   }(document, 'script', 'gamedistribution-jssdk'));
   </script>`,
+  // Playhop is powered by Yandex Games — load the official Yandex Games SDK.
+  playhoop: '<script src="https://sdk.games.s3.yandex.net/sdk.js"></script>',
 };
 
 async function buildOne(platform, injection) {

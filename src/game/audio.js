@@ -7,12 +7,13 @@ export class AudioEngine {
     this.ctx = null;
     this.userMuted = false; // in-game mute toggle (gear button)
     this.sdkMuted = false;  // forced by CrazyGames SDK (muteAudio / during ads) — priority
+    this.pageHidden = false; // tab/window not focused (Yandex req. 1.3 — pause on blur)
     this.master = null;
   }
 
-  // Effective mute = either source. SDK mute takes priority and cannot be
-  // overridden by the in-game toggle.
-  get muted() { return this.userMuted || this.sdkMuted; }
+  // Effective mute = any source. SDK mute and page-hidden take priority and
+  // cannot be overridden by the in-game toggle.
+  get muted() { return this.userMuted || this.sdkMuted || this.pageHidden; }
   _apply() { if (this.master) this.master.gain.value = this.muted ? 0 : 0.5; }
 
   // Must be called after a user gesture (browser autoplay policy).
@@ -66,6 +67,10 @@ export class AudioEngine {
   }
   setSdkMuted(muted) {        // CrazyGames SDK muteAudio / during ads (priority)
     this.sdkMuted = muted;
+    this._apply();
+  }
+  setPageHidden(hidden) {     // tab/window lost focus — pause audio (Yandex req. 1.3)
+    this.pageHidden = hidden;
     this._apply();
   }
 
