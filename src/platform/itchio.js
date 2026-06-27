@@ -9,6 +9,7 @@ export default class ItchIoAdapter extends PlatformAdapter {
   constructor() {
     super();
     this.name = 'itchio';
+    this.allowsExternalLinks = true;
   }
 
   async init() {

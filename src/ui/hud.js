@@ -8,7 +8,12 @@ const DROP_FULL = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 1
 const DROP_EMPTY = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#d8c8a6"/></svg>`;
 
 // Visible build version so it's obvious which build is loaded (cache check).
-export const BUILD_VERSION = 'v28';
+export const BUILD_VERSION = 'v29';
+
+// "Support the developer" tip link (shown only on platforms that allow external
+// links — itch.io/local; never on CrazyGames/GD/Y8 where external links are not allowed).
+const SUPPORT_URL = 'https://razorpay.me/@devsarun';
+const SUPPORT_KEY = 'arrowzen.supported';
 
 export class Hud {
   constructor(root) {
@@ -59,7 +64,21 @@ export class Hud {
     this.cardTitle = this._el('h1', 'card-title', this.card, 'Arrowzen');
     this.cardMsg = this._el('p', 'card-msg', this.card, '');
     this.cardButtons = this._el('div', 'card-buttons', this.card);
+
+    // Optional "support the developer" tip link (platform-gated, hidden by
+    // default; the href is only set when actually shown — see showWin).
+    this.supportLink = this._el('a', 'support-link hidden', this.card,
+      '\u2615 Enjoying Arrowzen? Support the developer');
+    this.supportLink.target = '_blank';
+    this.supportLink.rel = 'noopener noreferrer';
+    this.supportLink.addEventListener('click', () => {
+      this._setSupported();                 // they supported -> never show again
+      this.supportLink.classList.add('hidden');
+    });
   }
+
+  _isSupported() { try { return localStorage.getItem(SUPPORT_KEY) === '1'; } catch (_) { return false; } }
+  _setSupported() { try { localStorage.setItem(SUPPORT_KEY, '1'); } catch (_) {} }
 
   _toggleMute() {
     if (!this.game) return;
@@ -78,6 +97,7 @@ export class Hud {
     this.cardTitle.textContent = title;
     this.cardMsg.textContent = msg;
     this.cardButtons.innerHTML = '';
+    if (this.supportLink) this.supportLink.classList.add('hidden'); // default off
     for (const b of buttons) {
       const btn = this._el('button', `btn ${b.primary ? 'btn-primary' : ''}`, this.cardButtons);
       btn.textContent = b.label;
@@ -151,6 +171,16 @@ export class Hud {
       [{ label: last ? 'Finish' : 'Next Level', primary: true,
          onClick: () => { this.hideOverlay(); game.nextLevel(); } }]
     );
+    // Show the "support developer" tip on each clear, until the user supports —
+    // only where external links are allowed (itch.io/local), never on ad portals.
+    const canSupport = !!(game.adapter && game.adapter.allowsExternalLinks) && !this._isSupported();
+    if (canSupport) {
+      this.supportLink.href = SUPPORT_URL;     // set href ONLY when shown (never on ad portals)
+      this.supportLink.classList.remove('hidden');
+    } else {
+      this.supportLink.removeAttribute('href');
+      this.supportLink.classList.add('hidden');
+    }
   }
 
   showLose(game) {

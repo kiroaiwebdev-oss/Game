@@ -9,6 +9,7 @@ export default class LocalAdapter extends PlatformAdapter {
   constructor() {
     super();
     this.name = 'local';
+    this.allowsExternalLinks = true;
   }
 
   async init() {

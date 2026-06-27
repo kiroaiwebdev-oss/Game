@@ -16,6 +16,9 @@ export class PlatformAdapter {
   constructor() {
     this.name = 'base';
     this._muteListeners = [];
+    // External payment/links allowed? false on ad portals (CrazyGames/GD/Y8)
+    // which forbid external links; true on itch.io/local where we show a tip link.
+    this.allowsExternalLinks = false;
   }
 
   async init() {}
