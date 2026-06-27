@@ -108,4 +108,10 @@ html, body, #app {
 .btn-primary { background: var(--gold); color: #fff; }
 .btn-primary:hover { filter: brightness(1.05); }
 
+.build-ver {
+  position: absolute; bottom: 4px; right: 8px;
+  font-size: 10px; font-weight: 700; color: rgba(91, 74, 51, 0.35);
+  pointer-events: none;
+}
+
 .hidden { display: none !important; }
