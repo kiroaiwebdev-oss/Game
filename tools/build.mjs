@@ -20,7 +20,7 @@ const PLATFORMS = {
   local: '',
   itchio: `<script>window.ARROW_PUZZLE_PLATFORM='itchio';</script>`,
   crazygames: `<script>window.ARROW_PUZZLE_PLATFORM='crazygames';</script>`,
-  gamedistribution: `<script>window.ARROW_PUZZLE_PLATFORM='gamedistribution';window.ARROW_PUZZLE_GD_ID='REPLACE_WITH_YOUR_GD_GAME_ID';</script>`,
+  gamedistribution: `<script>window.ARROW_PUZZLE_PLATFORM='gamedistribution';window.ARROW_PUZZLE_GD_ID='66cbecf41bcf40688afef34406236d20';</script>`,
   y8: `<script>window.ARROW_PUZZLE_PLATFORM='y8';window.ARROW_PUZZLE_Y8_APPID='REPLACE_WITH_YOUR_Y8_APP_ID';</script>`,
   playhoop: `<script>window.ARROW_PUZZLE_PLATFORM='playhoop';</script>`,
 };
