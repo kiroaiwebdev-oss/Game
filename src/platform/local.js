@@ -9,7 +9,9 @@ export default class LocalAdapter extends PlatformAdapter {
   constructor() {
     super();
     this.name = 'local';
-    this.allowsExternalLinks = true;
+    // Support/tip link is shown ONLY on the itch.io build, not in local/dev
+    // previews, and never on ad portals.
+    this.allowsExternalLinks = false;
   }
 
   async init() {
