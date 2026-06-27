@@ -13,13 +13,28 @@
 
 import { DIRS, VEC, OPPOSITE, dirBetween } from './dir2d.js';
 import { makeArrow, Board } from './board.js';
-import { isSolvable } from './escape2.js';
+import { isSolvable, escapableArrows } from './escape2.js';
 import { makeRng, randInt, shuffle } from './rng.js';
 
 const key = (x, y) => `${x},${y}`;
 
 // Perpendicular directions (used to introduce bends at higher levels).
 const PERP = { U: ['L', 'R'], D: ['L', 'R'], L: ['U', 'D'], R: ['U', 'D'] };
+
+// Difficulty proxies in a SINGLE solve: solvable?, how many arrows are free at
+// the start (fewer = harder), and how many sequential waves (more = deeper).
+function difficultyStats(board) {
+  const initFree = escapableArrows(board).length;
+  const work = board.clone();
+  let passes = 0;
+  while (true) {
+    const esc = escapableArrows(work);
+    if (!esc.length) break;
+    passes++;
+    for (const a of esc) work.removeArrow(a);
+  }
+  return { solvable: work.isCleared, initFree, passes };
+}
 
 function distanceToExterior(mask) {
   const { cols, rows, cells } = mask;
@@ -193,30 +208,38 @@ function boardOf(cols, rows, arrows) {
 
 // Generate a solvable, mostly-complete shape level.
 // Returns a level def: { name, cols, rows, arrows:[{cells,dir}], shape }.
-export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 6, mask, bendChance = 0, merge = false }) {
+export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 6, mask, bendChance = 0, merge = false, attempts = 6 }) {
   const m = mask;
-  let bestRaw = null, bestCover = -1, bestTotal = 1;
-  for (let attempt = 0; attempt < 6; attempt++) {
+  let best = null, bestScore = -Infinity;
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const { arrows, covered, total } = fillAttempt(m, seed + attempt * 101, maxLen, bendChance);
-    if (!isSolvable(boardOf(cols, rows, arrows))) continue; // safety (always true)
-    if (covered > bestCover) {
-      bestCover = covered; bestTotal = total; bestRaw = arrows;
-      if (covered / total >= 0.985) break;
+    const cov = covered / total;
+    if (cov < 0.85) continue;
+
+    // Prefer the merged (denser) version when it stays solvable; one solve gives
+    // solvable?, initFree and passes.
+    let finalArrows = arrows;
+    let stats;
+    if (merge) {
+      const mg = mergeSingles(arrows);
+      const ms = difficultyStats(boardOf(cols, rows, mg));
+      if (ms.solvable) { finalArrows = mg; stats = ms; }
     }
-  }
-  if (!bestRaw) return { name: shape, shape, cols, rows, arrows: [], coverage: 0 };
+    if (!stats) stats = difficultyStats(boardOf(cols, rows, finalArrows));
+    if (!stats.solvable) continue;
 
-  // On harder levels, weave leftover single cells into corridors (denser maze),
-  // but only if it stays solvable.
-  let finalArrows = bestRaw;
-  if (merge) {
-    const merged = mergeSingles(bestRaw);
-    if (isSolvable(boardOf(cols, rows, merged))) finalArrows = merged;
+    // Harder = more sequential passes + FEW arrows free at the start, so it is
+    // genuinely confusing which arrow can leave next.
+    const score = stats.passes * 2 - stats.initFree * 4 + cov * 2;
+    if (score > bestScore) { bestScore = score; best = { arrows: finalArrows, coverage: cov }; }
   }
-
+  if (!best) {
+    const { arrows, covered, total } = fillAttempt(m, seed, maxLen, bendChance);
+    best = { arrows, coverage: covered / total };
+  }
   return {
     name: shape, shape, cols, rows,
-    arrows: finalArrows.map((a) => ({ cells: a.cells, dir: a.dir })),
-    coverage: bestCover / bestTotal,
+    arrows: best.arrows.map((a) => ({ cells: a.cells, dir: a.dir })),
+    coverage: best.coverage,
   };
 }
