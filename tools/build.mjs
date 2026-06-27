@@ -20,7 +20,7 @@ const DIST = join(ROOT, 'dist');
 // Shipping the others would leak their external SDK/CDN URLs (cdn.y8.com,
 // sdk.crazygames.com, html5.api.gamedistribution.com, ...) into the archive,
 // which Yandex/Playhop flags as "Service storage URL detected".
-const ALL_ADAPTERS = ['local', 'itchio', 'crazygames', 'gamedistribution', 'y8', 'playhoop'];
+const ALL_ADAPTERS = ['local', 'itchio', 'crazygames', 'gamedistribution', 'y8', 'gamepix', 'playhoop'];
 function keepAdaptersFor(platform) {
   const keep = new Set(['local']);
   if (platform !== 'local') keep.add(platform);
@@ -34,6 +34,7 @@ const PLATFORMS = {
   crazygames: `<script>window.ARROW_PUZZLE_PLATFORM='crazygames';</script>`,
   gamedistribution: `<script>window.ARROW_PUZZLE_PLATFORM='gamedistribution';</script>`,
   y8: `<script>window.ARROW_PUZZLE_PLATFORM='y8';window.ARROW_PUZZLE_Y8_APPID='REPLACE_WITH_YOUR_Y8_APP_ID';</script>`,
+  gamepix: `<script>window.ARROW_PUZZLE_PLATFORM='gamepix';</script>`,
   playhoop: `<script>window.ARROW_PUZZLE_PLATFORM='playhoop';</script>`,
 };
 
@@ -61,6 +62,8 @@ const HEAD_INJECT = {
   // Using the absolute s3 URL (sdk.games.s3.yandex.net) triggers the moderation
   // flag "Service storage URL detected". See yandex.com/dev/games sdk-about.
   playhoop: '<script src="/sdk.js"></script>',
+  // GamePix HTML5 SDK v3 (global class GamePixSDK).
+  gamepix: '<script src="https://integration.gamepix.com/sdk/v3/gamepix.sdk.js"></script>',
 };
 
 async function buildOne(platform, injection) {

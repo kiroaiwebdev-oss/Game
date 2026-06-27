@@ -85,6 +85,7 @@ export async function createAdapter(name = detectPlatformName()) {
       case 'crazygames':      mod = await import('./crazygames.js'); break;
       case 'gamedistribution': mod = await import('./gamedistribution.js'); break;
       case 'y8':              mod = await import('./y8.js'); break;
+      case 'gamepix':         mod = await import('./gamepix.js'); break;
       case 'playhoop':        mod = await import('./playhoop.js'); break;
       case 'itchio':          mod = await import('./itchio.js'); break;
       default:                mod = await import('./local.js'); break;
