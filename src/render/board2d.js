@@ -67,10 +67,10 @@ export class Board2D {
     const ctx = this.ctx;
     const pts = item.points.map((p) => this.cellToScreen(p.x, p.y));
     const [ux, uy] = DIR_UNIT[item.dir];
-    const lineW = Math.max(1.5, this.cell * 0.09);   // thin lines
+    const lineW = Math.max(1.2, this.cell * 0.065);   // very thin lines
 
     // Simple OPEN chevron arrowhead (not filled).
-    const wing = Math.max(5, this.cell * 0.34);
+    const wing = Math.max(4, this.cell * 0.3);
     const ang = 0.52; // ~30 degrees half-angle
 
     const color = item.color || COLORS.arrow;

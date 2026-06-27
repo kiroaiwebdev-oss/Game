@@ -7,10 +7,9 @@
 import { makeMask } from '../core/masks.js';
 import { generateShapeLevel } from '../core/snakegen.js';
 
-// Simple shapes read well at low resolution (early levels).
-const SIMPLE_SHAPES = ['full', 'diamond', 'square', 'cross', 'triangle'];
-// Detailed shapes need a bigger grid (later levels).
-const RICH_SHAPES = ['heart', 'spade', 'star', 'butterfly', 'circle', 'arrow', 'ring', 'diamond', 'cross'];
+// Shape rotation: Level 1 is a full rectangular grid (matches the reference);
+// later levels rotate through silhouettes for variety.
+const SHAPES = ['full', 'heart', 'spade', 'star', 'diamond', 'butterfly', 'circle', 'arrow', 'ring', 'cross', 'triangle', 'square'];
 
 function difficultyFor(i) {
   if (i < 8) return 'Normal';
@@ -21,13 +20,12 @@ function difficultyFor(i) {
 export function buildLevels(count = 50) {
   const specs = [];
   for (let i = 0; i < count; i++) {
-    // Steep ramp: small/simple -> big, dense, heavily winding maze.
-    const size = Math.min(20, 8 + Math.floor(i / 2));
-    const maxLen = Math.min(18, 2 + Math.floor(i * 0.7)); // longer winding snakes
-    const bendChance = Math.min(0.85, Math.max(0, (i - 3) * 0.06)); // more turns
-    const shape = size < 11
-      ? SIMPLE_SHAPES[i % SIMPLE_SHAPES.length]
-      : RICH_SHAPES[i % RICH_SHAPES.length];
+    // Dense, winding from the start; grows bigger/harder with level.
+    const size = Math.min(18, 11 + Math.floor(i / 3));
+    const maxLen = Math.min(14, 4 + Math.floor(i * 0.6)); // long winding snakes
+    // Bent from level 1 (looks complex), rising further with level.
+    const bendChance = Math.min(0.9, 0.5 + i * 0.02);
+    const shape = SHAPES[i % SHAPES.length];
     specs.push({
       level: i + 1,
       shape,
