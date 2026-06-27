@@ -1,58 +1,84 @@
 // levels.js
-// Builds the campaign as lightweight SPECS instantly, then generates each
-// level's arrows lazily on first load. Difficulty rises with the level:
-// early levels are small with few, large, very clear arrows; later levels grow
-// into big, dense, winding mazes and richer shapes.
+// Campaign of Arrow-Puzzle levels. Difficulty rises MONOTONICALLY with level:
+// - target arrow count: ~55 for levels 1-10, then ramps 55 -> 80
+// - arrows bend more (more confusing) at higher levels
+// The grid size is auto-searched per shape so the arrow count lands near the
+// target regardless of how "full" the silhouette is.
 
 import { makeMask } from '../core/masks.js';
 import { generateShapeLevel } from '../core/snakegen.js';
 
-// Shape rotation: Level 1 is a full rectangular grid (matches the reference);
-// later levels rotate through silhouettes for variety.
 const SHAPES = ['full', 'heart', 'spade', 'star', 'diamond', 'butterfly', 'circle', 'arrow', 'ring', 'cross', 'triangle', 'square'];
 
 function difficultyFor(i) {
-  if (i < 8) return 'Normal';
-  if (i < 20) return 'Hard';
-  return 'Challenge';
+  if (i < 10) return 'Normal';
+  if (i < 25) return 'Hard';
+  return 'Expert';
 }
 
-export function buildLevels(count = 50) {
+// Levels 1-10 => ~55 arrows; from level 11 ramp up to 80.
+function targetArrows(i) {
+  return i < 10 ? 55 : Math.min(80, 55 + (i - 9) * 2);
+}
+
+export function buildLevels(count = 60) {
   const specs = [];
   for (let i = 0; i < count; i++) {
-    // Dense, winding from the start; grows bigger/harder with level.
-    const size = Math.min(20, 13 + Math.floor(i / 2));
-    const maxLen = Math.min(12, 5 + Math.floor(i * 0.4));
-    // Heavily bent (confusing) from level 1, rising with level.
-    const bendChance = Math.min(0.95, 0.7 + i * 0.015);
-    const shape = SHAPES[i % SHAPES.length];
     specs.push({
       level: i + 1,
-      shape,
-      cols: size,
-      rows: size + 2,
-      maxLen,
-      bendChance,
-      merge: bendChance > 0.25, // weave singles into corridors on harder levels
+      shape: SHAPES[i % SHAPES.length],
+      maxLen: 3, // short arrows => many of them; still bend into L/Z shapes
+      bendChance: Math.min(0.95, 0.55 + i * 0.012), // more confusing with level
+      merge: false, // keep many distinct arrows (predictable count)
       seed: 7000 + i * 131,
       lives: 3,
       difficulty: difficultyFor(i),
+      target: targetArrows(i),
       arrows: null, // generated lazily
     });
   }
   return specs;
 }
 
+// Estimate the grid size from the shape's fill-ratio so the arrow count lands
+// near the target in just 1-2 generations (fast). generateShapeLevel still
+// picks the hardest candidate per size.
 export function ensureLevel(spec) {
-  if (!spec.arrows) {
-    const mask = makeMask(spec.shape, spec.cols, spec.rows);
-    const def = generateShapeLevel({
-      shape: spec.shape, cols: spec.cols, rows: spec.rows, mask,
+  if (spec.arrows) return spec;
+  const target = spec.target;
+  const AVG = 2.0; // avg cells per arrow (maxLen 3, no merge)
+
+  const ref = makeMask(spec.shape, 24, 29);
+  const ratio = Math.max(0.2, ref.cells.size / (24 * 29)); // fraction of bbox filled
+  const cellsNeeded = target * AVG;
+
+  const gen = (cols) => {
+    const rows = Math.round(cols * 1.2);
+    const mask = makeMask(spec.shape, cols, rows);
+    return generateShapeLevel({
+      shape: spec.shape, cols, rows, mask,
       maxLen: spec.maxLen, seed: spec.seed,
-      bendChance: spec.bendChance || 0, merge: !!spec.merge,
+      bendChance: spec.bendChance, merge: spec.merge, attempts: 3,
     });
-    spec.arrows = def.arrows;
-    spec.coverage = def.coverage;
+  };
+
+  const clamp = (v) => Math.max(8, Math.min(30, v));
+  let cols = clamp(Math.round(Math.sqrt(cellsNeeded / (ratio * 1.2))));
+  let def = gen(cols);
+
+  // Converge toward the target arrow count (each gen ~50ms).
+  for (let c = 0; c < 3; c++) {
+    const n = def.arrows.length;
+    if (n >= target * 0.9 && n <= target * 1.15) break;
+    const next = clamp(n < target ? cols + 2 : cols - 2);
+    if (next === cols) break;
+    cols = next;
+    def = gen(cols);
   }
+
+  spec.cols = def.cols;
+  spec.rows = def.rows;
+  spec.arrows = def.arrows;
+  spec.coverage = def.coverage;
   return spec;
 }
