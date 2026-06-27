@@ -11,7 +11,7 @@ const DROP_FULL = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 1
 const DROP_EMPTY = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#d8c8a6"/></svg>`;
 
 // Visible build version so it's obvious which build is loaded (cache check).
-export const BUILD_VERSION = 'v37';
+export const BUILD_VERSION = 'v38';
 
 // "Support the developer" tip link (shown only on platforms that allow external
 // links — itch.io/local; never on CrazyGames/GD/Y8 where external links are not allowed).
