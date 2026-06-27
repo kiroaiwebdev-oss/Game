@@ -41,14 +41,16 @@ export default class CrazyGamesAdapter extends PlatformAdapter {
   happyTime() { try { this.sdk?.game.happytime?.(); } catch (_) {} }
 
   showRewarded() {
-    // Resolves true only if the player watched the rewarded ad to the end.
+    // Resolves true if the reward should be granted. During Basic Launch ads are
+    // disabled (adError fires) — we still grant so hint/continue stay functional
+    // and the player is never penalised by an unavailable ad.
     return new Promise((resolve) => {
       if (!this.sdk?.ad) { resolve(true); return; }
       let settled = false;
       const done = (value) => { if (!settled) { settled = true; resolve(value); } };
       this.sdk.ad.requestAd('rewarded', {
         adFinished: () => done(true),
-        adError: () => done(false),
+        adError: () => done(true),
       });
     });
   }
