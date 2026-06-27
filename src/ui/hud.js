@@ -8,7 +8,7 @@ const DROP_FULL = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 1
 const DROP_EMPTY = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#d8c8a6"/></svg>`;
 
 // Visible build version so it's obvious which build is loaded (cache check).
-export const BUILD_VERSION = 'v26';
+export const BUILD_VERSION = 'v27';
 
 export class Hud {
   constructor(root) {
@@ -125,7 +125,7 @@ export class Hud {
     this._showControls(false);
     this._showOverlay(
       'Arrowzen',
-      'Tap an arrow to send it off the board. An arrow can leave only when its path to the edge is free. Clear every arrow to win. Relax and find the flow.',
+      'Tap arrows to clear the board. An arrow leaves when its path to the edge is free.',
       [{ label: 'Play', primary: true, onClick: () => { this.hideOverlay(); onStart(); } }]
     );
   }

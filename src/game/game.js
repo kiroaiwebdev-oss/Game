@@ -27,6 +27,7 @@ export class Game {
     this.board = null;
     this.lives = 0; this.maxLives = 3; this.hints = 1;
     this.busy = false; this._running = false;
+    this.onboardCell = null; // visual "tap here" hint on the very first level
   }
 
   start() { if (!this._running) { this._running = true; this._loop(); } }
@@ -47,6 +48,13 @@ export class Game {
     this.animator.spawnAll(this.board.allArrows());
     this.state = GameState.PLAYING;
     this.busy = false;
+    // First-ever level: show a visual "tap here" hint on a free arrow (skippable
+    // — it disappears on the first tap). Shown only once, then never again.
+    this.onboardCell = null;
+    if (this.levelIndex === 0 && !isOnboarded()) {
+      const a = findHint(this.board);
+      if (a) { const h = this.board.head(a); this.onboardCell = { x: h.x, y: h.y }; }
+    }
     this.adapter.gameplayStart();
     this.hud.onLevelStart(this);
   }
@@ -61,6 +69,8 @@ export class Game {
 
   handleTap(cssX, cssY) {
     if (this.state !== GameState.PLAYING || this.busy) return;
+    // First tap dismisses the onboarding hint (skippable).
+    if (this.onboardCell) { this.onboardCell = null; setOnboarded(); }
     const cell = this.view.screenToCell(cssX, cssY);
     if (!cell) return;
     const id = this.board.occupant(cell.x, cell.y);
@@ -204,7 +214,7 @@ export class Game {
     const frame = () => {
       if (!this._running) return;
       this.animator.update();
-      if (this.board) this.view.render(this.buildDrawList());
+      if (this.board) this.view.render(this.buildDrawList(), this.onboardCell);
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
@@ -219,4 +229,12 @@ export function loadProgress() {
 export function saveProgress(unlockedUpTo) {
   try { const cur = loadProgress(); if (unlockedUpTo > cur) localStorage.setItem(PROGRESS_KEY, String(unlockedUpTo)); }
   catch (_) {}
+}
+
+const ONBOARD_KEY = 'arrowzen.onboarded';
+export function isOnboarded() {
+  try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch (_) { return false; }
+}
+export function setOnboarded() {
+  try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (_) {}
 }

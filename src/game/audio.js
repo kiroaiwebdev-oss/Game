@@ -20,6 +20,38 @@ export class AudioEngine {
       this.master.connect(this.ctx.destination);
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
+    this._startAmbient();
+  }
+
+  // A very soft, slowly-breathing pad for a calm atmosphere (routed through
+  // master, so the mute button silences it too).
+  _startAmbient() {
+    if (!this.ctx || this.ambient) return;
+    const g = this.ctx.createGain();
+    g.gain.value = 0.05; // very subtle
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 650;
+    // Slow "breathing" on the volume.
+    const lfo = this.ctx.createOscillator();
+    lfo.frequency.value = 0.08;
+    const lfoGain = this.ctx.createGain();
+    lfoGain.gain.value = 0.03;
+    lfo.connect(lfoGain);
+    lfoGain.connect(g.gain);
+    lfo.start();
+    // Soft low chord (C3, G3, C4), slightly detuned.
+    const oscs = [130.81, 196.0, 261.63].map((f, i) => {
+      const o = this.ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f * (1 + i * 0.001);
+      o.connect(g);
+      o.start();
+      return o;
+    });
+    g.connect(lp);
+    lp.connect(this.master);
+    this.ambient = { g, oscs, lfo };
   }
 
   setMuted(muted) {

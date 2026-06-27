@@ -113,11 +113,43 @@ export class Board2D {
     ctx.restore();
   }
 
-  render(items) {
+  render(items, onboard) {
     this._layout();
     const ctx = this.ctx;
     ctx.fillStyle = COLORS.paper;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     for (const it of items) this._drawArrow(it);
+    if (onboard) this._drawTapHint(onboard);
+  }
+
+  // Visual onboarding: a pulsing "tap here" ripple + finger over a free arrow.
+  _drawTapHint(cell) {
+    const ctx = this.ctx;
+    const [cx, cy] = this.cellToScreen(cell.x, cell.y);
+    const t = performance.now() / 1000;
+    const p = (t % 1.2) / 1.2; // 0..1 loop
+    const r = this.cell * 0.45 + p * this.cell * 1.0;
+    ctx.save();
+    // Expanding ripple ring.
+    ctx.globalAlpha = (1 - p) * 0.55;
+    ctx.strokeStyle = COLORS.escape;
+    ctx.lineWidth = Math.max(2, this.cell * 0.12);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    // Solid centre dot.
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = COLORS.escape;
+    ctx.beginPath();
+    ctx.arc(cx, cy, this.cell * 0.16, 0, Math.PI * 2);
+    ctx.fill();
+    // Finger cue (gentle bob).
+    ctx.globalAlpha = 1;
+    const bob = Math.sin(t * 4) * this.cell * 0.06;
+    ctx.font = `${Math.round(this.cell * 1.1)}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('\u{1F446}', cx + this.cell * 0.25, cy + this.cell * 0.2 + bob);
+    ctx.restore();
   }
 }
