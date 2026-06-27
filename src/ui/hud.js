@@ -1,169 +1,98 @@
-// hud.js (2D, light theme)
-// Builds and controls the clean DOM overlay matching the reference design:
-// a top bar (back · "Level N" · settings), a status row (remaining · hearts ·
-// difficulty), bottom round buttons (hint · restart), and a modal card for
-// menu / win / lose screens. Pure DOM, no framework.
+// hud.js — premium minimal white UI matching the reference layout.
+// Top: level (left) · 3 hearts (center) · difficulty badge (right) · divider.
+// Bottom: floating hint bulb (left) and grid/reset button (right).
 
-const DROP_FULL = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#4a90d9"/></svg>`;
-const DROP_EMPTY = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#d8c8a6"/></svg>`;
+const HEART = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 21s-7.4-4.6-9.9-9.2C.5 8.3 2 4.9 5.2 4.9c2 0 3.3 1.2 4.8 3 1.5-1.8 2.8-3 4.8-3 3.2 0 4.7 3.4 3.1 6.9C19.4 16.4 12 21 12 21z" fill="#ff3b4e"/></svg>`;
+const HEART_OFF = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 21s-7.4-4.6-9.9-9.2C.5 8.3 2 4.9 5.2 4.9c2 0 3.3 1.2 4.8 3 1.5-1.8 2.8-3 4.8-3 3.2 0 4.7 3.4 3.1 6.9C19.4 16.4 12 21 12 21z" fill="#e6e8ee"/></svg>`;
+const BULB = `<svg viewBox="0 0 24 24" class="bsvg"><path d="M9 21h6v-1H9v1zm3-19a7 7 0 0 0-4 12.7c.6.5 1 1.1 1 1.8v.5h6v-.5c0-.7.4-1.3 1-1.8A7 7 0 0 0 12 2z" fill="none" stroke="#3a86ff" stroke-width="1.7" stroke-linejoin="round"/></svg>`;
+const GRID = `<svg viewBox="0 0 24 24" class="bsvg"><g fill="none" stroke="#3a86ff" stroke-width="1.7"><rect x="4" y="4" width="6" height="6" rx="1.4"/><rect x="14" y="4" width="6" height="6" rx="1.4"/><rect x="4" y="14" width="6" height="6" rx="1.4"/><rect x="14" y="14" width="6" height="6" rx="1.4"/></g></svg>`;
 
 export class Hud {
-  constructor(root) {
-    this.root = root;
-    this.game = null;
-    this._build();
-  }
+  constructor(root) { this.root = root; this.game = null; this._build(); }
+  bindGame(g) { this.game = g; }
 
-  bindGame(game) { this.game = game; }
-
-  _el(tag, cls, parent, html) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
+  _el(t, c, p, html) {
+    const e = document.createElement(t);
+    if (c) e.className = c;
     if (html != null) e.innerHTML = html;
-    if (parent) parent.appendChild(e);
+    if (p) p.appendChild(e);
     return e;
   }
 
   _build() {
-    // Top bar
-    this.topbar = this._el('div', 'topbar', this.root);
-    this.backBtn = this._el('button', 'icon-btn', this.topbar, '&#8249;');
-    this.levelTitle = this._el('div', 'level-title', this.topbar, 'Level 1');
-    this.gearBtn = this._el('button', 'icon-btn', this.topbar, '&#9881;');
-    this.backBtn.addEventListener('click', () => this.game && this.game.hud.showMenuFor(this.game));
-    this.gearBtn.addEventListener('click', () => this._toggleMute());
+    this.top = this._el('div', 'topbar', this.root);
+    this.levelEl = this._el('div', 'level', this.top, '');
+    this.hearts = this._el('div', 'hearts', this.top);
+    this.badge = this._el('div', 'badge', this.top, 'Normal');
+    this.divider = this._el('div', 'divider', this.root);
 
-    // Status row
-    this.statusbar = this._el('div', 'statusbar', this.root);
-    this.remainChip = this._el('div', 'chip', this.statusbar, '');
-    this.hearts = this._el('div', 'hearts', this.statusbar);
-    this.diffBadge = this._el('div', 'badge', this.statusbar, 'Normal');
-
-    // Bottom controls
-    this.bottombar = this._el('div', 'bottombar', this.root);
-    this.hintBtn = this._el('button', 'round-btn', this.bottombar,
-      `<span class="bulb">&#128161;</span><span class="round-badge">1</span>`);
-    this.restartBtn = this._el('button', 'round-btn', this.bottombar, '&#8635;');
+    this.bottom = this._el('div', 'bottombar', this.root);
+    this.hintBtn = this._el('button', 'fab', this.bottom, BULB);
+    this._el('span', 'ad-tag', this.hintBtn, 'Ad');
+    this.gridBtn = this._el('button', 'fab', this.bottom, GRID);
     this.hintBtn.addEventListener('click', () => this.game && this.game.requestHint());
-    this.restartBtn.addEventListener('click', () => this.game && this.game.retryLevel());
+    this.gridBtn.addEventListener('click', () => this.game && this.game.resetPath());
 
-    // Modal
     this.overlay = this._el('div', 'overlay hidden', this.root);
     this.card = this._el('div', 'card', this.overlay);
-    this.cardTitle = this._el('h1', 'card-title', this.card, 'Arrow Puzzle');
+    this.cardTitle = this._el('h1', 'card-title', this.card, 'Amaze');
     this.cardMsg = this._el('p', 'card-msg', this.card, '');
-    this.cardButtons = this._el('div', 'card-buttons', this.card);
+    this.cardBtns = this._el('div', 'card-btns', this.card);
   }
 
-  _toggleMute() {
-    if (!this.game) return;
-    const a = this.game.audio;
-    a.setMuted(!a.muted);
-    this.gearBtn.classList.toggle('muted', a.muted);
+  _chrome(show) {
+    [this.top, this.divider, this.bottom].forEach((e) => e.classList.toggle('hidden', !show));
   }
 
-  _showControls(show) {
-    [this.topbar, this.statusbar, this.bottombar].forEach((e) =>
-      e.classList.toggle('hidden', !show));
-  }
-
-  _showOverlay(title, msg, buttons) {
+  _overlay(title, msg, btns) {
     this.cardTitle.textContent = title;
     this.cardMsg.textContent = msg;
-    this.cardButtons.innerHTML = '';
-    for (const b of buttons) {
-      const btn = this._el('button', `btn ${b.primary ? 'btn-primary' : ''}`, this.cardButtons);
-      btn.textContent = b.label;
-      btn.addEventListener('click', b.onClick);
+    this.cardBtns.innerHTML = '';
+    for (const b of btns) {
+      const el = this._el('button', `btn ${b.primary ? 'btn-primary' : ''}`, this.cardBtns);
+      el.textContent = b.label;
+      el.addEventListener('click', b.onClick);
     }
     this.overlay.classList.remove('hidden');
   }
   hideOverlay() { this.overlay.classList.add('hidden'); }
 
-  // ---- updates ----
-  updateLives(game) {
+  updateHearts(g) {
     this.hearts.innerHTML = '';
-    for (let i = 0; i < game.maxLives; i++) {
-      this._el('span', 'heart', this.hearts, i < game.lives ? DROP_FULL : DROP_EMPTY);
-    }
-  }
-  updateRemaining(game) {
-    this.remainChip.innerHTML = `<span class="grid-glyph">&#9638;</span> ${game.board.remaining}`;
-  }
-  updateHints(game) {
-    const badge = this.hintBtn.querySelector('.round-badge');
-    if (badge) badge.textContent = String(game.hints);
-  }
-  setHintPending(pending) {
-    this.hintBtn.disabled = pending;
-    this.hintBtn.classList.toggle('loading', pending);
+    for (let i = 0; i < 3; i++) this._el('span', 'heart', this.hearts, i < g.lives ? HEART : HEART_OFF);
   }
 
-  setContinuePending(pending) {
-    // Disable overlay buttons while the rewarded ad is loading.
-    this.cardButtons.querySelectorAll('button').forEach((b) => { b.disabled = pending; });
+  _fmt(ms) {
+    const s = Math.round(ms / 1000), m = Math.floor(s / 60);
+    return m > 0 ? `${m}:${String(s % 60).padStart(2, '0')}` : `${s}s`;
   }
-
-  _fmtTime(ms) {
-    const s = Math.round(ms / 1000);
-    const m = Math.floor(s / 60);
-    const ss = String(s % 60).padStart(2, '0');
-    return m > 0 ? `${m}:${ss}` : `${s}s`;
-  }
-
-  // ---- screens ----
-  showMenuFor(game) { this.showMenu(() => { game.audio.resume(); game.loadLevel(0); }); }
 
   showMenu(onStart) {
-    this._showControls(false);
-    this._showOverlay(
-      'Arrow Puzzle',
-      'Tap an arrow to send it off the board. An arrow can leave only when its path to the edge is free. Clear every arrow to win. Relax and find the flow.',
-      [{ label: 'Play', primary: true, onClick: () => { this.hideOverlay(); onStart(); } }]
-    );
+    this._chrome(false);
+    this._overlay('Amaze',
+      'Drag your finger through the maze corridors to reach the exit. Calm, minimal, one clean line at a time.',
+      [{ label: 'Play', primary: true, onClick: () => { this.hideOverlay(); onStart(); } }]);
   }
 
-  onLevelStart(game) {
-    this.levelTitle.textContent = `Level ${game.levelIndex + 1}`;
-    this.diffBadge.textContent = game.levels[game.levelIndex].difficulty || 'Normal';
-    this.updateLives(game);
-    this.updateRemaining(game);
-    this.updateHints(game);
-    this.setHintPending(false);
-    this._showControls(true);
+  onLevelStart(g) {
+    this.levelEl.innerHTML = `<span class="lvl-glyph">&#9638;</span> ${g.levelIndex + 1}`;
+    this.badge.textContent = g.levels[g.levelIndex].difficulty || 'Normal';
+    this.updateHearts(g);
+    this._chrome(true);
     this.hideOverlay();
   }
 
-  showWin(game) {
-    this._showControls(false);
-    const last = game.levelIndex + 1 >= game.levels.length;
-    const stats = `Time  ${this._fmtTime(game.solveMs)}     ·     Lives left  ${game.lives}/${game.maxLives}`;
-    this._showOverlay(
-      'Cleared!',
-      stats,
-      [{ label: last ? 'Finish' : 'Next Level', primary: true,
-         onClick: () => { this.hideOverlay(); game.nextLevel(); } }]
-    );
+  showWin(g) {
+    this._chrome(false);
+    const last = g.levelIndex + 1 >= g.levels.length;
+    this._overlay('Solved!', `Time  ${this._fmt(g.solveMs)}`,
+      [{ label: last ? 'Finish' : 'Next Maze', primary: true,
+         onClick: () => { this.hideOverlay(); g.nextLevel(); } }]);
   }
 
-  showLose(game) {
-    this._showControls(false);
-    this._showOverlay(
-      'Out of lives',
-      'Watch a short video to get 3 lives and keep your progress — or start the level over.',
-      [
-        { label: 'Watch Ad  ·  +3 Lives', primary: true, onClick: () => game.continueWithAd() },
-        { label: 'Restart Level', onClick: () => { this.hideOverlay(); game.retryLevel(); } },
-      ]
-    );
-  }
-
-  showAllComplete(game) {
-    this._showControls(false);
-    this._showOverlay(
-      'All Levels Complete!',
-      'You cleared every board. A calm, focused mind — well done.',
-      [{ label: 'Play Again', primary: true, onClick: () => { this.hideOverlay(); game.loadLevel(0); } }]
-    );
+  showAllComplete(g) {
+    this._chrome(false);
+    this._overlay('All Mazes Complete!', 'A calm, clear mind. Beautifully done.',
+      [{ label: 'Play Again', primary: true, onClick: () => { this.hideOverlay(); g.loadLevel(0); } }]);
   }
 }
