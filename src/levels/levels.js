@@ -21,10 +21,10 @@ export function buildLevels(count = 50) {
   const specs = [];
   for (let i = 0; i < count; i++) {
     // Dense, winding from the start; grows bigger/harder with level.
-    const size = Math.min(18, 11 + Math.floor(i / 3));
-    const maxLen = Math.min(14, 4 + Math.floor(i * 0.6)); // long winding snakes
-    // Bent from level 1 (looks complex), rising further with level.
-    const bendChance = Math.min(0.9, 0.5 + i * 0.02);
+    const size = Math.min(18, 12 + Math.floor(i / 3));
+    const maxLen = Math.min(16, 6 + Math.floor(i * 0.6)); // long winding snakes
+    // Heavily bent from level 1 (very complex look), rising further with level.
+    const bendChance = Math.min(0.92, 0.62 + i * 0.02);
     const shape = SHAPES[i % SHAPES.length];
     specs.push({
       level: i + 1,
