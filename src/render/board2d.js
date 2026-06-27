@@ -67,11 +67,11 @@ export class Board2D {
     const ctx = this.ctx;
     const pts = item.points.map((p) => this.cellToScreen(p.x, p.y));
     const [ux, uy] = DIR_UNIT[item.dir];
-    const lineW = Math.max(1.5, this.cell * 0.085);   // thin lines
+    const lineW = Math.max(1.5, this.cell * 0.09);   // thin lines
 
-    // Head triangle dimensions (clear but compact, suits thin lines).
-    const hl = Math.max(6, this.cell * 0.42);  // length (tip to base)
-    const hw = Math.max(4, this.cell * 0.24);  // half base width
+    // Simple OPEN chevron arrowhead (not filled).
+    const wing = Math.max(5, this.cell * 0.34);
+    const ang = 0.52; // ~30 degrees half-angle
 
     const color = item.color || COLORS.arrow;
     ctx.save();
@@ -101,19 +101,15 @@ export class Board2D {
       hc = c;
     }
 
-    // Solid triangle arrowhead — unmistakable direction.
-    const px = -uy, py = ux;
-    const tip = [hc[0] + ux * hl * 0.62, hc[1] + uy * hl * 0.62];
-    const base = [hc[0] - ux * hl * 0.38, hc[1] - uy * hl * 0.38];
-    const b1 = [base[0] + px * hw, base[1] + py * hw];
-    const b2 = [base[0] - px * hw, base[1] - py * hw];
-    ctx.shadowBlur = item.glow ? item.glow * 18 : 0;
+    // Simple open chevron at the head (two short strokes), pointing along dir.
+    const a0 = Math.atan2(uy, ux);
+    const w1 = [hc[0] - wing * Math.cos(a0 - ang), hc[1] - wing * Math.sin(a0 - ang)];
+    const w2 = [hc[0] - wing * Math.cos(a0 + ang), hc[1] - wing * Math.sin(a0 + ang)];
     ctx.beginPath();
-    ctx.moveTo(tip[0], tip[1]);
-    ctx.lineTo(b1[0], b1[1]);
-    ctx.lineTo(b2[0], b2[1]);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(w1[0], w1[1]);
+    ctx.lineTo(hc[0], hc[1]);
+    ctx.lineTo(w2[0], w2[1]);
+    ctx.stroke();
     ctx.restore();
   }
 

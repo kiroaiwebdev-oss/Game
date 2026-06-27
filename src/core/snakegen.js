@@ -162,14 +162,22 @@ function mergeSingles(arrows) {
       for (const d of DIRS) {
         const n = { x: c.x + VEC[d].x, y: c.y + VEC[d].y };
         const A = cellArrow.get(key(n.x, n.y));
-        if (A && A !== a) {
-          const tail = A.cells[0];
-          if (tail.x === n.x && tail.y === n.y) {
-            A.cells.unshift({ x: c.x, y: c.y });
-            cellArrow.set(key(c.x, c.y), A);
-            attached = true; break;
-          }
-        }
+        if (!A || A === a) continue;
+        const tail = A.cells[0];
+        if (!(tail.x === n.x && tail.y === n.y)) continue;
+        const head = A.cells[A.cells.length - 1];
+        const v = VEC[A.dir];
+        // (1) If A is a single cell, the new cell must sit directly BEHIND the
+        //     head (opposite the head dir) so the head stays clean/aligned.
+        if (A.cells.length === 1 && !(head.x - c.x === v.x && head.y - c.y === v.y)) continue;
+        // (2) The new cell must not lie on the head's forward exit ray (which
+        //     would block the arrow with its own body).
+        const dx = c.x - head.x, dy = c.y - head.y;
+        const colinearFwd = (v.x !== 0) ? (dy === 0 && dx * v.x > 0) : (dx === 0 && dy * v.y > 0);
+        if (colinearFwd) continue;
+        A.cells.unshift({ x: c.x, y: c.y });
+        cellArrow.set(key(c.x, c.y), A);
+        attached = true; break;
       }
       if (attached) { out.splice(i, 1); merged = true; }
     }
@@ -185,7 +193,7 @@ function boardOf(cols, rows, arrows) {
 
 // Generate a solvable, mostly-complete shape level.
 // Returns a level def: { name, cols, rows, arrows:[{cells,dir}], shape }.
-export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 6, mask, bendChance = 0 }) {
+export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 6, mask, bendChance = 0, merge = false }) {
   const m = mask;
   let bestRaw = null, bestCover = -1, bestTotal = 1;
   for (let attempt = 0; attempt < 6; attempt++) {
@@ -198,10 +206,17 @@ export function generateShapeLevel({ shape, cols, rows, seed = 1, maxLen = 6, ma
   }
   if (!bestRaw) return { name: shape, shape, cols, rows, arrows: [], coverage: 0 };
 
-  // Keep arrows straight (no merging, which could create bends).
+  // On harder levels, weave leftover single cells into corridors (denser maze),
+  // but only if it stays solvable.
+  let finalArrows = bestRaw;
+  if (merge) {
+    const merged = mergeSingles(bestRaw);
+    if (isSolvable(boardOf(cols, rows, merged))) finalArrows = merged;
+  }
+
   return {
     name: shape, shape, cols, rows,
-    arrows: bestRaw.map((a) => ({ cells: a.cells, dir: a.dir })),
+    arrows: finalArrows.map((a) => ({ cells: a.cells, dir: a.dir })),
     coverage: bestCover / bestTotal,
   };
 }

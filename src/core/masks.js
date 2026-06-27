@@ -30,6 +30,16 @@ const SHAPES = {
     const body = Math.abs(x) <= 0.09 && Math.abs(y) <= 0.9;
     return wing(0.46) || body;
   },
+  spade: (x, y) => {
+    // Inverted heart (cusp pointing up) for the body + a stem at the bottom.
+    const X = x * 1.25;
+    const Y = -y * 1.25 - 0.28;
+    const a = X * X + Y * Y - 0.62;
+    const body = a * a * a - X * X * Y * Y * Y <= 0;
+    const ys = -y; // positive downward
+    const stem = y < -0.08 && y > -0.96 && Math.abs(x) < 0.05 + (ys - 0.08) * 0.5;
+    return body || stem;
+  },
   arrow: (x, y) => {
     const shaft = Math.abs(x) <= 0.2 && y >= -0.95 && y <= 0.25;
     const head = y >= 0.2 && y <= 0.95 && Math.abs(x) <= (0.95 - y) * 1.15;
