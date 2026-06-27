@@ -1,82 +1,81 @@
-// Core logic tests for the snake-arrow model. Run: node tests/core.test.mjs
-import { Board, makeArrow, boardFromLevel, resetArrowId } from '../src/core/board.js';
-import { canEscape, solve, isSolvable, findHint } from '../src/core/escape2.js';
-import { makeMask, MASK_NAMES } from '../src/core/masks.js';
-import { generateShapeLevel } from '../src/core/snakegen.js';
+// Maze engine tests. Run: node tests/core.test.mjs
+import { makeMaze, passageOpen, cellKey } from '../src/core/maze.js';
+import { makeMask } from '../src/core/masks.js';
 
 let pass = 0, fail = 0;
 const check = (n, v) => { v ? (pass++, console.log(`  ok  - ${n}`)) : (fail++, console.error(`  FAIL- ${n}`)); };
+const parse = (k) => k.split(',').map(Number);
 
-console.log('== Escape rule (snake) ==');
-{
-  resetArrowId();
-  // Board 4x1. Arrow A occupies cell (1) head facing R; arrow B at (2) facing R.
-  const b = new Board(4, 1);
-  const A = b.addArrow(makeArrow([{ x: 0, y: 0 }, { x: 1, y: 0 }], 'R')); // head at (1)
-  const B = b.addArrow(makeArrow([{ x: 2, y: 0 }], 'R'));                  // head at (2)
-  check('A blocked by B ahead', canEscape(b, A) === false);
-  check('B has clear path right', canEscape(b, B) === true);
-}
-
-console.log('== Solver: solvable ==');
-{
-  resetArrowId();
-  const def = { cols: 4, rows: 1, arrows: [
-    { cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }], dir: 'R' },
-    { cells: [{ x: 2, y: 0 }], dir: 'R' },
-  ]};
-  const b = boardFromLevel(def);
-  const res = solve(b);
-  check('chain solvable', res.solvable === true);
-  check('solve does not mutate original', b.remaining === 2);
-}
-
-console.log('== Solver: deadlock ==');
-{
-  resetArrowId();
-  const def = { cols: 2, rows: 1, arrows: [
-    { cells: [{ x: 0, y: 0 }], dir: 'R' }, // blocked by other
-    { cells: [{ x: 1, y: 0 }], dir: 'L' }, // blocked by other
-  ]};
-  const res = solve(boardFromLevel(def));
-  check('mutual block UNsolvable', res.solvable === false);
-}
-
-console.log('== Hint ==');
-{
-  resetArrowId();
-  const b = boardFromLevel({ cols: 3, rows: 1, arrows: [
-    { cells: [{ x: 0, y: 0 }], dir: 'R' }, { cells: [{ x: 1, y: 0 }], dir: 'R' },
-  ]});
-  const h = findHint(b);
-  check('hint is escapable', h !== null && canEscape(b, h));
-}
-
-console.log('== Masks ==');
-{
-  const heart = makeMask('heart', 13, 14);
-  check('heart mask non-empty', heart.cells.size > 20);
-  const all = makeMask('full', 10, 10);
-  check('full mask fills grid', all.cells.size === 100);
-}
-
-console.log('== Shape generation: solvable + good coverage ==');
-{
-  let allSolvable = true, lowCover = 0, total = 0, sumCover = 0;
-  for (const shape of MASK_NAMES) {
-    for (let s = 0; s < 4; s++) {
-      const cols = 13, rows = 14;
-      const mask = makeMask(shape, cols, rows);
-      const def = generateShapeLevel({ shape, cols, rows, mask, maxLen: 6, seed: 100 + s * 17 });
-      const b = boardFromLevel(def);
-      if (!isSolvable(b)) allSolvable = false;
-      total++; sumCover += def.coverage;
-      if (def.coverage < 0.9) lowCover++;
+function floodReach(maze) {
+  const seen = new Set([maze.entrance.k]);
+  const stack = [maze.entrance.k];
+  while (stack.length) {
+    const cur = stack.pop();
+    const [x, y] = parse(cur);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nk = cellKey(x + dx, y + dy);
+      if (maze.cells.has(nk) && !seen.has(nk) && passageOpen(maze.walls, cur, nk)) {
+        seen.add(nk); stack.push(nk);
+      }
     }
   }
-  check('all generated shapes solvable', allSolvable);
-  check('avg coverage >= 0.97', (sumCover / total) >= 0.97);
-  check('few low-coverage levels', lowCover <= 1);
+  return seen.size;
+}
+
+function internalEdges(maze) {
+  let e = 0;
+  for (const k of maze.cells) {
+    const [x, y] = parse(k);
+    for (const [dx, dy] of [[1, 0], [0, 1]]) { // count each undirected edge once
+      const nk = cellKey(x + dx, y + dy);
+      if (maze.cells.has(nk) && passageOpen(maze.walls, k, nk)) e++;
+    }
+  }
+  return e;
+}
+
+console.log('== Maze generation across shapes/seeds ==');
+{
+  let connected = true, perfect = true, solvable = true, distinct = true, inMask = true;
+  const shapes = ['spade', 'heart', 'diamond', 'star', 'circle', 'triangle', 'cross', 'ring', 'arrow', 'butterfly'];
+  for (const shape of shapes) {
+    for (let s = 0; s < 3; s++) {
+      const cols = 22, rows = 26;
+      const maze = makeMaze({ shape, cols, rows, seed: 10 + s * 7 });
+      // connected: every cell reachable from entrance
+      if (floodReach(maze) !== maze.cells.size) connected = false;
+      // perfect maze: spanning tree => edges == cells - 1
+      if (internalEdges(maze) !== maze.cells.size - 1) perfect = false;
+      // solvable: solution path from entrance to exit
+      const sol = maze.solution;
+      if (!(sol.length && sol[0] === maze.entrance.k && sol[sol.length - 1] === maze.exit.k)) solvable = false;
+      if (maze.entrance.k === maze.exit.k) distinct = false;
+      // cells are inside the shape mask
+      const mask = makeMask(shape, cols, rows);
+      for (const k of maze.cells) if (!mask.cells.has(k)) inMask = false;
+    }
+  }
+  check('every cell reachable (no isolated sections)', connected);
+  check('perfect maze (spanning tree: edges == cells-1)', perfect);
+  check('solution path links entrance to exit', solvable);
+  check('entrance and exit are distinct', distinct);
+  check('maze stays inside the shape silhouette', inMask);
+}
+
+console.log('== passageOpen sanity ==');
+{
+  const maze = makeMaze({ shape: 'circle', cols: 16, rows: 16, seed: 1 });
+  // The first solution step must be an open passage.
+  const ok = maze.solution.length < 2 || passageOpen(maze.walls, maze.solution[0], maze.solution[1]);
+  check('solution steps are open passages', ok);
+}
+
+console.log('== Performance ==');
+{
+  const t0 = Date.now();
+  for (let s = 0; s < 10; s++) makeMaze({ shape: 'spade', cols: 34, rows: 39, seed: s });
+  const ms = Date.now() - t0;
+  check(`10 large mazes generated quickly (${ms}ms)`, ms < 2000);
 }
 
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);

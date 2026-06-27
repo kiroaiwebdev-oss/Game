@@ -1,30 +1,32 @@
-// input.js (2D)
-// Simple tap input: a press-and-release without much movement counts as a tap
-// on a grid cell. Works for both mouse and touch.
+// input.js — finger/mouse drag to steer through the maze corridors.
 
 export function attachInput(canvas, game, audio) {
-  let downX = 0, downY = 0, down = false;
-  const TAP_SLOP = 12; // px of movement still counts as a tap
+  let dragging = false;
 
-  function start(x, y) { down = true; downX = x; downY = y; audio.resume(); }
-  function end(x, y) {
-    if (!down) return;
-    down = false;
-    if (Math.hypot(x - downX, y - downY) <= TAP_SLOP) {
-      const rect = canvas.getBoundingClientRect();
-      game.handleTap(x - rect.left, y - rect.top);
-    }
+  function pt(e) {
+    const t = e.touches ? e.touches[0] : e;
+    const rect = canvas.getBoundingClientRect();
+    return [t.clientX - rect.left, t.clientY - rect.top];
   }
 
-  canvas.addEventListener('mousedown', (e) => start(e.clientX, e.clientY));
-  window.addEventListener('mouseup', (e) => end(e.clientX, e.clientY));
+  function down(e) {
+    dragging = true;
+    audio && audio.resume && audio.resume();
+    const [x, y] = pt(e);
+    game.handlePoint(x, y);
+  }
+  function move(e) {
+    if (!dragging) return;
+    const [x, y] = pt(e);
+    game.handlePoint(x, y);
+    if (e.cancelable) e.preventDefault();
+  }
+  function up() { dragging = false; }
 
-  canvas.addEventListener('touchstart', (e) => {
-    const t = e.touches[0];
-    if (t) start(t.clientX, t.clientY);
-  }, { passive: true });
-  canvas.addEventListener('touchend', (e) => {
-    const t = e.changedTouches[0];
-    if (t) end(t.clientX, t.clientY);
-  }, { passive: true });
+  canvas.addEventListener('mousedown', down);
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+  canvas.addEventListener('touchstart', down, { passive: true });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', up, { passive: true });
 }
