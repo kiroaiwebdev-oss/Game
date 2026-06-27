@@ -1,7 +1,7 @@
 // playhoop.js
 // Playhop adapter — Playhop is powered by the Yandex Games ecosystem, so this
 // adapter integrates the official Yandex Games SDK v2 (global: YaGames / ysdk).
-// Docs: https://yandex.com/dev/games/doc/en/
+// Docs: Yandex Games developer documentation (dev/games).
 //
 // The SDK <script> is injected into <head> by the build (relative path /sdk.js,
 // served by Yandex when the archive is uploaded to the Console),
