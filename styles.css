@@ -28,7 +28,7 @@ html, body, #app {
 .level { font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; }
 .lvl-glyph { color: #b9c0cc; font-size: 15px; }
 .hearts { display: flex; gap: 5px; justify-content: center; }
-.heart, .hsvg { width: 26px; height: 26px; display: block; }
+.heart, .hsvg { width: 24px; height: 24px; display: block; }
 .badge {
   justify-self: end; background: var(--badge-bg); color: #6b7280;
   font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 999px;
@@ -38,10 +38,10 @@ html, body, #app {
   background: var(--line);
 }
 
-/* Bottom floating buttons */
+/* Bottom floating buttons — symmetric around centre (~1/3 and ~2/3), per ref */
 .bottombar {
-  position: absolute; bottom: calc(env(safe-area-inset-bottom, 0) + 24px); left: 0; right: 0;
-  display: flex; align-items: center; justify-content: space-between; padding: 0 40px;
+  position: absolute; bottom: calc(env(safe-area-inset-bottom, 0) + 26px); left: 0; right: 0;
+  display: flex; align-items: center; justify-content: center; gap: 64px;
 }
 .fab {
   pointer-events: auto; position: relative; width: 62px; height: 62px; border: none; border-radius: 50%;
