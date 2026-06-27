@@ -35,9 +35,13 @@ async function buildOne(platform, injection) {
   await cp(join(ROOT, 'styles.css'), join(out, 'styles.css'));
 
   // Inject platform selector into index.html right before the module script.
+  // Match the script tag with or without a ?v= cache-busting query.
   let html = await readFile(join(ROOT, 'index.html'), 'utf-8');
-  const marker = '<script type="module" src="src/main.js"></script>';
-  html = html.replace(marker, `${injection ? injection + '\n  ' : ''}${marker}`);
+  const scriptRe = /<script type="module" src="src\/main\.js(?:\?v=\d+)?"><\/script>/;
+  const m = html.match(scriptRe);
+  if (!m) throw new Error('Could not find the module script tag in index.html');
+  const replacement = injection ? `${injection}\n  ${m[0]}` : m[0];
+  html = html.replace(scriptRe, replacement);
   await writeFile(join(out, 'index.html'), html);
 
   console.log(`built dist/${platform}/`);
