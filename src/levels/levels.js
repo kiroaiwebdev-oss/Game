@@ -1,46 +1,84 @@
 // levels.js
-// Campaign of maze levels. Each level is a different shape silhouette; size and
-// density grow with the level (Normal -> Hard -> Expert). Mazes are generated
-// lazily and cached. Every maze is a perfect maze => guaranteed solvable.
+// Campaign of Arrow-Puzzle levels. Difficulty rises MONOTONICALLY with level:
+// - target arrow count: ~55 for levels 1-10, then ramps 55 -> 80
+// - arrows bend more (more confusing) at higher levels
+// The grid size is auto-searched per shape so the arrow count lands near the
+// target regardless of how "full" the silhouette is.
 
-import { makeMaze } from '../core/maze.js';
+import { makeMask } from '../core/masks.js';
+import { generateShapeLevel } from '../core/snakegen.js';
 
-// Shapes that read well as silhouettes for the maze border.
-const SHAPES = [
-  'spade', 'heart', 'diamond', 'star', 'circle', 'butterfly',
-  'triangle', 'cross', 'arrow', 'ring',
-];
+const SHAPES = ['full', 'heart', 'spade', 'star', 'diamond', 'butterfly', 'circle', 'arrow', 'ring', 'cross', 'triangle', 'square'];
 
 function difficultyFor(i) {
-  if (i < 8) return 'Normal';
-  if (i < 20) return 'Hard';
+  if (i < 10) return 'Normal';
+  if (i < 25) return 'Hard';
   return 'Expert';
+}
+
+// Levels 1-10 => ~55 arrows; from level 11 ramp up to 80.
+function targetArrows(i) {
+  return i < 10 ? 55 : Math.min(80, 55 + (i - 9) * 2);
 }
 
 export function buildLevels(count = 60) {
   const specs = [];
   for (let i = 0; i < count; i++) {
-    // Resolution grows -> denser maze, finer corridors (matches the reference).
-    const size = Math.min(40, 24 + Math.floor(i * 0.7));
     specs.push({
       level: i + 1,
       shape: SHAPES[i % SHAPES.length],
-      cols: size,
-      rows: Math.round(size * 1.2),
-      seed: 4000 + i * 277,
+      maxLen: 10, // long snakes => arrows wind a lot (ghoome hue)
+      bendChance: 0.85, // turn often => winding/confusing
+      merge: true, // absorb leftover singles into corridors => fewer, longer, winding
+      seed: 7000 + i * 131,
       lives: 3,
       difficulty: difficultyFor(i),
-      maze: null, // generated lazily
+      target: targetArrows(i),
+      arrows: null, // generated lazily
     });
   }
   return specs;
 }
 
+// Estimate the grid size from the shape's fill-ratio so the arrow count lands
+// near the target in just 1-2 generations (fast). generateShapeLevel still
+// picks the hardest candidate per size.
 export function ensureLevel(spec) {
-  if (!spec.maze) {
-    spec.maze = makeMaze({
-      shape: spec.shape, cols: spec.cols, rows: spec.rows, seed: spec.seed,
+  if (spec.arrows) return spec;
+  const target = spec.target;
+  const AVG = 5.0; // avg cells per arrow (long winding snakes with merge)
+
+  const ref = makeMask(spec.shape, 24, 29);
+  const ratio = Math.max(0.2, ref.cells.size / (24 * 29)); // fraction of bbox filled
+  const cellsNeeded = target * AVG;
+
+  const gen = (cols) => {
+    const rows = Math.round(cols * 1.2);
+    const mask = makeMask(spec.shape, cols, rows);
+    return generateShapeLevel({
+      shape: spec.shape, cols, rows, mask,
+      maxLen: spec.maxLen, seed: spec.seed,
+      bendChance: spec.bendChance, merge: spec.merge, attempts: 2,
     });
+  };
+
+  const clamp = (v) => Math.max(8, Math.min(30, v));
+  let cols = clamp(Math.round(Math.sqrt(cellsNeeded / (ratio * 1.2))));
+  let def = gen(cols);
+
+  // Converge toward the target arrow count (each gen ~50ms).
+  for (let c = 0; c < 2; c++) {
+    const n = def.arrows.length;
+    if (n >= target * 0.9 && n <= target * 1.15) break;
+    const next = clamp(n < target ? cols + 2 : cols - 2);
+    if (next === cols) break;
+    cols = next;
+    def = gen(cols);
   }
+
+  spec.cols = def.cols;
+  spec.rows = def.rows;
+  spec.arrows = def.arrows;
+  spec.coverage = def.coverage;
   return spec;
 }
