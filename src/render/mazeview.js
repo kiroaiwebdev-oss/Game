@@ -81,7 +81,7 @@ export class MazeView {
 
     // Walls — batched into one stroke for performance.
     ctx.strokeStyle = COLORS.wall;
-    ctx.lineWidth = Math.max(1.4, s * 0.16);
+    ctx.lineWidth = Math.max(1.2, s * 0.11);
     ctx.lineCap = 'square';
     ctx.beginPath();
     for (const k of m.cells) {

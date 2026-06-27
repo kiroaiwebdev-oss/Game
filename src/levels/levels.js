@@ -20,13 +20,13 @@ function difficultyFor(i) {
 export function buildLevels(count = 60) {
   const specs = [];
   for (let i = 0; i < count; i++) {
-    // Resolution grows -> denser maze, tinier corridors, harder.
-    const size = Math.min(34, 16 + Math.floor(i * 0.7));
+    // Resolution grows -> denser maze, finer corridors (matches the reference).
+    const size = Math.min(40, 24 + Math.floor(i * 0.7));
     specs.push({
       level: i + 1,
       shape: SHAPES[i % SHAPES.length],
       cols: size,
-      rows: Math.round(size * 1.15),
+      rows: Math.round(size * 1.2),
       seed: 4000 + i * 277,
       lives: 3,
       difficulty: difficultyFor(i),
