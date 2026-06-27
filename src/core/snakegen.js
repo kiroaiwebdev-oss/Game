@@ -133,10 +133,11 @@ function fillAttempt(mask, seed, maxLen, bendChance = 0) {
     while (chain.length >= 2 && chain.length < maxLen) {
       const prev = chain[chain.length - 2];
       const travel = dirBetween(prev, cur);
+      // Strongly prefer turning (bend) so arrows wind as much as their length
+      // allows; fall back to straight only if no turn is possible.
       const order = (rng() < bendChance)
-        ? [...PERP[travel], travel]                       // prefer a turn
-        : (bendChance > 0 ? [travel, ...PERP[travel]]     // straight, bend if blocked
-                          : [travel]);                    // pure straight (easy levels)
+        ? [...PERP[travel], travel]
+        : [travel, ...PERP[travel]];
       let next = null;
       for (const d of order) {
         const nx = cur.x + VEC[d].x, ny = cur.y + VEC[d].y;

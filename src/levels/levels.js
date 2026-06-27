@@ -27,8 +27,8 @@ export function buildLevels(count = 60) {
     specs.push({
       level: i + 1,
       shape: SHAPES[i % SHAPES.length],
-      maxLen: 3, // short arrows => many of them; still bend into L/Z shapes
-      bendChance: Math.min(0.95, 0.55 + i * 0.012), // more confusing with level
+      maxLen: 5, // short-ish snakes (dense board) but bend whenever possible
+      bendChance: 0.95, // turn at almost every step => maximally winding
       merge: false, // keep many distinct arrows (predictable count)
       seed: 7000 + i * 131,
       lives: 3,
@@ -46,7 +46,7 @@ export function buildLevels(count = 60) {
 export function ensureLevel(spec) {
   if (spec.arrows) return spec;
   const target = spec.target;
-  const AVG = 2.0; // avg cells per arrow (maxLen 3, no merge)
+  const AVG = 2.6; // avg cells per arrow (short bent snakes, maxLen 5)
 
   const ref = makeMask(spec.shape, 24, 29);
   const ratio = Math.max(0.2, ref.cells.size / (24 * 29)); // fraction of bbox filled
