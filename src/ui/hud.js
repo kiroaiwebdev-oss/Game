@@ -8,7 +8,7 @@ const DROP_FULL = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 1
 const DROP_EMPTY = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#d8c8a6"/></svg>`;
 
 // Visible build version so it's obvious which build is loaded (cache check).
-export const BUILD_VERSION = 'v21';
+export const BUILD_VERSION = 'v22';
 
 export class Hud {
   constructor(root) {
@@ -32,7 +32,7 @@ export class Hud {
     this.topbar = this._el('div', 'topbar', this.root);
     this.backBtn = this._el('button', 'icon-btn', this.topbar, '&#8249;');
     this.levelTitle = this._el('div', 'level-title', this.topbar, 'Level 1');
-    this.gearBtn = this._el('button', 'icon-btn', this.topbar, '&#9881;');
+    this.gearBtn = this._el('button', 'icon-btn', this.topbar, '&#128266;'); // 🔊
     this.backBtn.addEventListener('click', () => this.game && this.game.hud.showMenuFor(this.game));
     this.gearBtn.addEventListener('click', () => this._toggleMute());
 
@@ -66,6 +66,7 @@ export class Hud {
     const a = this.game.audio;
     a.setMuted(!a.muted);
     this.gearBtn.classList.toggle('muted', a.muted);
+    this.gearBtn.innerHTML = a.muted ? '&#128263;' : '&#128266;'; // 🔇 / 🔊
   }
 
   _showControls(show) {
