@@ -29,11 +29,8 @@ export default class GameDistributionAdapter extends PlatformAdapter {
       gameId,
       onEvent: (event) => {
         switch (event.name) {
-          case 'SDK_GAME_PAUSE': this._emitMute(true); break;
-          case 'SDK_GAME_START': this._emitMute(false); break;
-          case 'SDK_REWARDED_WATCH_COMPLETE':
-            if (this._rewardResolver) { this._rewardResolver(true); this._rewardResolver = null; }
-            break;
+          case 'SDK_GAME_PAUSE': this._emitMute(true); break;   // mute during ads/pause
+          case 'SDK_GAME_START': this._emitMute(false); break;  // resume
           default: break;
         }
       },
@@ -47,17 +44,13 @@ export default class GameDistributionAdapter extends PlatformAdapter {
   happyTime() {}
 
   showRewarded() {
+    // Grant the reward when the ad finishes; also grant on error/unfilled so the
+    // hint/continue features stay functional and the player is never penalised.
     return new Promise((resolve) => {
       if (!this.sdk?.showAd) { resolve(true); return; }
-      this._rewardResolver = resolve;
-      Promise.resolve(this.sdk.showAd('rewarded'))
-        .then(() => {
-          // If the SDK resolves without the WATCH_COMPLETE event, assume not granted.
-          if (this._rewardResolver) { this._rewardResolver(false); this._rewardResolver = null; }
-        })
-        .catch(() => {
-          if (this._rewardResolver) { this._rewardResolver(false); this._rewardResolver = null; }
-        });
+      let settled = false;
+      const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+      Promise.resolve(this.sdk.showAd('rewarded')).then(() => done(true)).catch(() => done(true));
     });
   }
 
