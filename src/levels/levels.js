@@ -1,46 +1,60 @@
 // levels.js
-// Campaign of maze levels. Each level is a different shape silhouette; size and
-// density grow with the level (Normal -> Hard -> Expert). Mazes are generated
-// lazily and cached. Every maze is a perfect maze => guaranteed solvable.
+// Builds the campaign as lightweight SPECS instantly, then generates each
+// level's arrows lazily on first load. Difficulty rises with the level:
+// early levels are small with few, large, very clear arrows; later levels grow
+// into big, dense, winding mazes and richer shapes.
 
-import { makeMaze } from '../core/maze.js';
+import { makeMask } from '../core/masks.js';
+import { generateShapeLevel } from '../core/snakegen.js';
 
-// Shapes that read well as silhouettes for the maze border.
-const SHAPES = [
-  'spade', 'heart', 'diamond', 'star', 'circle', 'butterfly',
-  'triangle', 'cross', 'arrow', 'ring',
-];
+// Simple shapes read well at low resolution (early levels).
+const SIMPLE_SHAPES = ['full', 'diamond', 'square', 'cross', 'triangle'];
+// Detailed shapes need a bigger grid (later levels).
+const RICH_SHAPES = ['heart', 'spade', 'star', 'butterfly', 'circle', 'arrow', 'ring', 'diamond', 'cross'];
 
 function difficultyFor(i) {
   if (i < 8) return 'Normal';
   if (i < 20) return 'Hard';
-  return 'Expert';
+  return 'Challenge';
 }
 
-export function buildLevels(count = 60) {
+export function buildLevels(count = 50) {
   const specs = [];
   for (let i = 0; i < count; i++) {
-    // Resolution grows -> denser maze, finer corridors (matches the reference).
-    const size = Math.min(40, 24 + Math.floor(i * 0.7));
+    // Steep ramp: small/simple -> big, dense, heavily winding maze.
+    const size = Math.min(20, 8 + Math.floor(i / 2));
+    const maxLen = Math.min(18, 2 + Math.floor(i * 0.7)); // longer winding snakes
+    const bendChance = Math.min(0.85, Math.max(0, (i - 3) * 0.06)); // more turns
+    const shape = size < 11
+      ? SIMPLE_SHAPES[i % SIMPLE_SHAPES.length]
+      : RICH_SHAPES[i % RICH_SHAPES.length];
     specs.push({
       level: i + 1,
-      shape: SHAPES[i % SHAPES.length],
+      shape,
       cols: size,
-      rows: Math.round(size * 1.2),
-      seed: 4000 + i * 277,
+      rows: size + 2,
+      maxLen,
+      bendChance,
+      merge: bendChance > 0.25, // weave singles into corridors on harder levels
+      seed: 7000 + i * 131,
       lives: 3,
       difficulty: difficultyFor(i),
-      maze: null, // generated lazily
+      arrows: null, // generated lazily
     });
   }
   return specs;
 }
 
 export function ensureLevel(spec) {
-  if (!spec.maze) {
-    spec.maze = makeMaze({
-      shape: spec.shape, cols: spec.cols, rows: spec.rows, seed: spec.seed,
+  if (!spec.arrows) {
+    const mask = makeMask(spec.shape, spec.cols, spec.rows);
+    const def = generateShapeLevel({
+      shape: spec.shape, cols: spec.cols, rows: spec.rows, mask,
+      maxLen: spec.maxLen, seed: spec.seed,
+      bendChance: spec.bendChance || 0, merge: !!spec.merge,
     });
+    spec.arrows = def.arrows;
+    spec.coverage = def.coverage;
   }
   return spec;
 }

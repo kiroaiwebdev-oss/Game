@@ -1,22 +1,16 @@
-# Amaze — Maze Puzzle (HTML5)
+# Arrow Puzzle — 2D Tap-Away Game
 
-A premium, minimal **maze navigation** puzzle. Drag your finger through the thin
-black corridors of a maze that fills a custom silhouette (spade, heart, star, …)
-and reach the exit. Fully self-contained HTML5 + JS + Canvas 2D — no external
-dependencies, accepted by every web game portal.
+A relaxing 2D logic puzzle. Tap arrows to clear the board: an arrow can only leave
+when its straight path to the edge of the grid is free. Built as a **fully
+self-contained, zero-dependency** HTML5 + JavaScript game (crisp Canvas 2D vector
+art) so it is accepted by every web game portal (no external CDN, no build step
+required, tiny size, instant load).
 
 ## How to play
-- **Drag** from the start (green) through the corridors to the exit (red).
-- Movement is only along open passages — you can't cross walls.
-- **Hint** (💡) briefly reveals the solution path (rewarded ad on ad portals).
-- **Grid** button resets your drawn path.
-- Each level is a different shape; size/density rise (Normal → Hard → Expert).
-
-## Maze generation
-- A **perfect maze** (randomized DFS spanning tree) is carved **directly inside
-  the shape mask** — never a cropped rectangle. The outer border is organic.
-- Guaranteed solvable, every cell reachable, no isolated sections, one entrance
-  and one exit.
+- **Tap** an arrow to send it off the board in its direction.
+- It leaves only if nothing blocks its path to the edge — otherwise you lose a life.
+- **Hint** (💡) highlights an arrow that can safely escape right now (free hint first, then a rewarded ad on ad-enabled portals).
+- Clear every arrow to win. Levels rise in difficulty (Normal → Hard → Expert) and are **guaranteed solvable**.
 
 ## Run locally
 ```bash
