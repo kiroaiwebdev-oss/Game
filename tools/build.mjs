@@ -44,8 +44,11 @@ const HEAD_INJECT = {
     fjs.parentNode.insertBefore(js, fjs);
   }(document, 'script', 'gamedistribution-jssdk'));
   </script>`,
-  // Playhop is powered by Yandex Games — load the official Yandex Games SDK.
-  playhoop: '<script src="https://sdk.games.s3.yandex.net/sdk.js"></script>',
+  // Playhop is powered by Yandex Games. The game archive is uploaded to the
+  // Yandex Console, so the SDK MUST be loaded via the RELATIVE path "/sdk.js".
+  // Using the absolute s3 URL (sdk.games.s3.yandex.net) triggers the moderation
+  // flag "Service storage URL detected". See yandex.com/dev/games sdk-about.
+  playhoop: '<script src="/sdk.js"></script>',
 };
 
 async function buildOne(platform, injection) {

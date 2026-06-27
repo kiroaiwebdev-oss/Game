@@ -3,7 +3,8 @@
 // adapter integrates the official Yandex Games SDK v2 (global: YaGames / ysdk).
 // Docs: https://yandex.com/dev/games/doc/en/
 //
-// The SDK <script> is injected into <head> by the build (sdk.games.s3.yandex.net),
+// The SDK <script> is injected into <head> by the build (relative path /sdk.js,
+// served by Yandex when the archive is uploaded to the Console),
 // which exposes window.YaGames. We then call YaGames.init() to get the `ysdk`.
 //
 // Mapping to the game's common adapter interface:
@@ -16,7 +17,10 @@
 
 import { PlatformAdapter } from './adapter.js';
 
-const SDK_URL = 'https://sdk.games.s3.yandex.net/sdk.js';
+// Relative path: the archive is uploaded to the Yandex Console, so "/sdk.js" is
+// served by Yandex. Using the absolute s3 URL triggers the moderation flag
+// "Service storage URL detected".
+const SDK_URL = '/sdk.js';
 
 export default class PlayHoopAdapter extends PlatformAdapter {
   constructor() {
