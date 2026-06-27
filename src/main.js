@@ -29,7 +29,13 @@ async function boot() {
   game.start();
   adapter.loadingStop();
 
-  hud.showMenu(() => { audio.resume(); game.loadLevel(0); });
+  // Pre-roll ad on Play (GD best practice: ad on the splash/Play button), then
+  // start. On itch.io/local this resolves instantly (no ad).
+  hud.showMenu(async () => {
+    audio.resume();
+    try { await adapter.showInterstitial(); } catch (_) {}
+    game.loadLevel(0);
+  });
 
   window.__arrowPuzzle = { game, adapter, levels };
 }

@@ -20,15 +20,30 @@ const PLATFORMS = {
   local: '',
   itchio: `<script>window.ARROW_PUZZLE_PLATFORM='itchio';</script>`,
   crazygames: `<script>window.ARROW_PUZZLE_PLATFORM='crazygames';</script>`,
-  gamedistribution: `<script>window.ARROW_PUZZLE_PLATFORM='gamedistribution';window.ARROW_PUZZLE_GD_ID='66cbecf41bcf40688afef34406236d20';</script>`,
+  gamedistribution: `<script>window.ARROW_PUZZLE_PLATFORM='gamedistribution';</script>`,
   y8: `<script>window.ARROW_PUZZLE_PLATFORM='y8';window.ARROW_PUZZLE_Y8_APPID='REPLACE_WITH_YOUR_Y8_APP_ID';</script>`,
   playhoop: `<script>window.ARROW_PUZZLE_PLATFORM='playhoop';</script>`,
 };
 
-// Per-platform <head> injections — portal SDK scripts that the portal's QA
-// detector looks for directly in the HTML.
+// Per-platform <head> injections — portal SDK loaded directly in the HTML head,
+// exactly as each portal recommends.
 const HEAD_INJECT = {
   crazygames: '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>',
+  // GameDistribution's exact snippet (GD_OPTIONS + SDK loader). onEvent bridges
+  // to the game so it can mute/pause during ads.
+  gamedistribution: `<script>
+  window["GD_OPTIONS"] = {
+    "gameId": "66cbecf41bcf40688afef34406236d20",
+    "onEvent": function (event) { if (window.__arrowzenGD) window.__arrowzenGD(event); }
+  };
+  (function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = 'https://html5.api.gamedistribution.com/main.min.js';
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'gamedistribution-jssdk'));
+  </script>`,
 };
 
 async function buildOne(platform, injection) {

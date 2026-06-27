@@ -181,8 +181,8 @@ export class Game {
   async nextLevel() {
     const next = this.levelIndex + 1;
     if (next >= this.levels.length) { this.hud.showAllComplete(this); return; }
-    // CrazyGames-friendly ad cadence: a short break roughly every 3 levels.
-    if (next % 3 === 0) { try { await this.adapter.showInterstitial(); } catch (_) {} }
+    // Mid-roll ad on the Next button (the portal throttles frequency).
+    try { await this.adapter.showInterstitial(); } catch (_) {}
     this.loadLevel(next);
   }
 
