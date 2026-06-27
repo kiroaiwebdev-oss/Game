@@ -24,7 +24,11 @@ export default class CrazyGamesAdapter extends PlatformAdapter {
   }
 
   async init() {
-    await this.loadScript(SDK_URL);
+    // If the SDK was included statically in index.html (recommended for the
+    // CrazyGames QA detector), use it; otherwise load it dynamically.
+    if (!(window.CrazyGames && window.CrazyGames.SDK)) {
+      await this.loadScript(SDK_URL);
+    }
     this.sdk = window.CrazyGames && window.CrazyGames.SDK;
     if (!this.sdk) throw new Error('CrazyGames SDK not available');
     await this.sdk.init();

@@ -25,6 +25,12 @@ const PLATFORMS = {
   playhoop: `<script>window.ARROW_PUZZLE_PLATFORM='playhoop';</script>`,
 };
 
+// Per-platform <head> injections — portal SDK scripts that the portal's QA
+// detector looks for directly in the HTML.
+const HEAD_INJECT = {
+  crazygames: '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>',
+};
+
 async function buildOne(platform, injection) {
   const out = join(DIST, platform);
   await rm(out, { recursive: true, force: true });
@@ -42,6 +48,11 @@ async function buildOne(platform, injection) {
   if (!m) throw new Error('Could not find the module script tag in index.html');
   const replacement = injection ? `${injection}\n  ${m[0]}` : m[0];
   html = html.replace(scriptRe, replacement);
+
+  // Inject the portal SDK script into <head> so the portal QA detects it.
+  const head = HEAD_INJECT[platform];
+  if (head) html = html.replace('</head>', `  ${head}\n</head>`);
+
   await writeFile(join(out, 'index.html'), html);
 
   console.log(`built dist/${platform}/`);
