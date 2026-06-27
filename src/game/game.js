@@ -6,6 +6,8 @@ import { VEC } from '../core/dir2d.js';
 import { Board2D, COLORS } from '../render/board2d.js';
 import { Animator } from './animator.js';
 import { ensureLevel } from '../levels/levels.js';
+import * as storage from './storage.js';
+import { t } from '../ui/i18n.js';
 
 export const GameState = Object.freeze({
   MENU: 'menu', PLAYING: 'playing', WON: 'won', LOST: 'lost',
@@ -135,8 +137,8 @@ export class Game {
     if (!this.adapter.hasAds) { this._giveHint(); return; }
     // Ad platforms: show a themed rewarded popup ("Watch Ad / No Thanks") first.
     this.hud.showRewardedPrompt(
-      'Free Hint',
-      'Watch a short video to reveal an arrow you can safely clear.',
+      t('hint.title'),
+      t('hint.msg'),
       async () => {
         this.busy = true;
         this.hud.setHintPending(true);
@@ -235,18 +237,18 @@ export class Game {
 
 const PROGRESS_KEY = 'arrowpuzzle.progress';
 export function loadProgress() {
-  try { const v = parseInt(localStorage.getItem(PROGRESS_KEY) || '0', 10); return Number.isFinite(v) ? v : 0; }
+  try { const v = parseInt(storage.getItem(PROGRESS_KEY) || '0', 10); return Number.isFinite(v) ? v : 0; }
   catch (_) { return 0; }
 }
 export function saveProgress(unlockedUpTo) {
-  try { const cur = loadProgress(); if (unlockedUpTo > cur) localStorage.setItem(PROGRESS_KEY, String(unlockedUpTo)); }
+  try { const cur = loadProgress(); if (unlockedUpTo > cur) storage.setItem(PROGRESS_KEY, String(unlockedUpTo)); }
   catch (_) {}
 }
 
 const ONBOARD_KEY = 'arrowzen.onboarded';
 export function isOnboarded() {
-  try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch (_) { return false; }
+  try { return storage.getItem(ONBOARD_KEY) === '1'; } catch (_) { return false; }
 }
 export function setOnboarded() {
-  try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (_) {}
+  try { storage.setItem(ONBOARD_KEY, '1'); } catch (_) {}
 }

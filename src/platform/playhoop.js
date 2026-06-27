@@ -36,7 +36,18 @@ export default class PlayHoopAdapter extends PlatformAdapter {
     try {
       this.ysdk = await window.YaGames.init();
       window.ysdk = this.ysdk;
+      // Automatic language detection at launch (Yandex requirement 2.14).
+      const lang = this.ysdk?.environment?.i18n?.lang;
+      if (lang) this.lang = lang;
     } catch (_) { this.ysdk = null; }
+  }
+
+  // Use Yandex's safe storage instead of window.localStorage to avoid the
+  // "Service storage URL detected" moderation warning. If unavailable, return
+  // null so the game uses in-memory storage (never touch localStorage on Yandex).
+  async getStorage() {
+    try { if (this.ysdk?.getStorage) return await this.ysdk.getStorage(); } catch (_) {}
+    return null;
   }
 
   // The head <script> is async; poll briefly until YaGames appears.

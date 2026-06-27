@@ -8,6 +8,8 @@ import { buildLevels } from './levels/levels.js';
 import { Hud } from './ui/hud.js';
 import { Game } from './game/game.js';
 import { attachInput } from './game/input.js';
+import * as storage from './game/storage.js';
+import { setLang } from './ui/i18n.js';
 
 async function boot() {
   const canvas = document.getElementById('game-canvas');
@@ -19,6 +21,11 @@ async function boot() {
   const adapter = await createAdapter();
   adapter.loadingStart();
   adapter.onMuteChange((muted) => audio.setSdkMuted(muted));
+
+  // Automatic language detection at launch (Yandex req. 2.14) + safe storage
+  // backend (avoids the "Service storage URL detected" warning on Yandex).
+  setLang(adapter.lang);
+  try { storage.setBackend(await adapter.getStorage()); } catch (_) {}
 
   const levels = buildLevels(40);
 

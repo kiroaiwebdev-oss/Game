@@ -21,6 +21,9 @@ export class PlatformAdapter {
     this.allowsExternalLinks = false;
     // Does this platform serve real ads? (drives rewarded popups vs free actions)
     this.hasAds = false;
+    // Detected UI language (Yandex overrides from ysdk.environment.i18n.lang).
+    // Default to the browser language so non-Yandex portals localize too.
+    this.lang = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en';
   }
 
   async init() {}
@@ -31,6 +34,14 @@ export class PlatformAdapter {
   happyTime() {}
   setContext() {}
   clearContext() {}
+
+  // Return a localStorage-like key/value store. Base uses window.localStorage
+  // when available; Yandex overrides this with its safe storage (ysdk.getStorage)
+  // to avoid the "Service storage URL detected" moderation warning. Null => the
+  // game falls back to in-memory storage.
+  async getStorage() {
+    try { return window.localStorage || null; } catch (_) { return null; }
+  }
 
   // Default: no ads available, so always grant the reward (good for itch.io/local).
   async showRewarded() { return true; }

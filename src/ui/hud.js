@@ -4,11 +4,14 @@
 // difficulty), bottom round buttons (hint · restart), and a modal card for
 // menu / win / lose screens. Pure DOM, no framework.
 
+import { t } from './i18n.js';
+import * as storage from '../game/storage.js';
+
 const DROP_FULL = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#4a90d9"/></svg>`;
 const DROP_EMPTY = `<svg viewBox="0 0 24 24" class="hsvg"><path d="M12 2C12 2 5 10.2 5 14.3A7 7 0 0 0 19 14.3C19 10.2 12 2 12 2z" fill="#d8c8a6"/></svg>`;
 
 // Visible build version so it's obvious which build is loaded (cache check).
-export const BUILD_VERSION = 'v35';
+export const BUILD_VERSION = 'v36';
 
 // "Support the developer" tip link (shown only on platforms that allow external
 // links — itch.io/local; never on CrazyGames/GD/Y8 where external links are not allowed).
@@ -68,7 +71,7 @@ export class Hud {
     // Optional "support the developer" tip link (platform-gated, hidden by
     // default; the href is only set when actually shown — see showWin).
     this.supportLink = this._el('a', 'support-link hidden', this.card,
-      '\u2615 Enjoying Arrowzen? Support the developer');
+      t('support'));
     this.supportLink.target = '_blank';
     this.supportLink.rel = 'noopener noreferrer';
     this.supportLink.addEventListener('click', () => {
@@ -77,8 +80,8 @@ export class Hud {
     });
   }
 
-  _isSupported() { try { return localStorage.getItem(SUPPORT_KEY) === '1'; } catch (_) { return false; } }
-  _setSupported() { try { localStorage.setItem(SUPPORT_KEY, '1'); } catch (_) {} }
+  _isSupported() { try { return storage.getItem(SUPPORT_KEY) === '1'; } catch (_) { return false; } }
+  _setSupported() { try { storage.setItem(SUPPORT_KEY, '1'); } catch (_) {} }
 
   _toggleMute() {
     if (!this.game) return;
@@ -113,8 +116,8 @@ export class Hud {
   showRewardedPrompt(title, msg, onWatch) {
     this._showControls(true); // keep the board visible behind the modal
     this._showOverlay(title, msg, [
-      { label: 'Watch Ad', primary: true, onClick: () => { this.hideOverlay(); onWatch(); } },
-      { label: 'No Thanks', onClick: () => this.hideOverlay() },
+      { label: t('ad.watch'), primary: true, onClick: () => { this.hideOverlay(); onWatch(); } },
+      { label: t('ad.no'), onClick: () => this.hideOverlay() },
     ]);
   }
 
@@ -155,15 +158,16 @@ export class Hud {
   showMenu(onStart) {
     this._showControls(false);
     this._showOverlay(
-      'Arrowzen',
-      'Tap arrows to clear the board. An arrow leaves when its path to the edge is free.',
-      [{ label: 'Play', primary: true, onClick: () => { this.hideOverlay(); onStart(); } }]
+      t('menu.title'),
+      t('menu.msg'),
+      [{ label: t('menu.play'), primary: true, onClick: () => { this.hideOverlay(); onStart(); } }]
     );
   }
 
   onLevelStart(game) {
-    this.levelTitle.textContent = `Level ${game.levelIndex + 1}`;
-    this.diffBadge.textContent = game.levels[game.levelIndex].difficulty || 'Normal';
+    this.levelTitle.textContent = `${t('level')} ${game.levelIndex + 1}`;
+    const diff = game.levels[game.levelIndex].difficulty || 'Normal';
+    this.diffBadge.textContent = t('diff.' + diff);
     this.updateLives(game);
     this.updateRemaining(game);
     this.updateHints(game);
@@ -175,11 +179,11 @@ export class Hud {
   showWin(game) {
     this._showControls(false);
     const last = game.levelIndex + 1 >= game.levels.length;
-    const stats = `Time  ${this._fmtTime(game.solveMs)}     ·     Lives left  ${game.lives}/${game.maxLives}`;
+    const stats = `${t('win.time')}  ${this._fmtTime(game.solveMs)}     ·     ${t('win.lives')}  ${game.lives}/${game.maxLives}`;
     this._showOverlay(
-      'Cleared!',
+      t('win.title'),
       stats,
-      [{ label: last ? 'Finish' : 'Next Level', primary: true,
+      [{ label: last ? t('win.finish') : t('win.next'), primary: true,
          onClick: () => { this.hideOverlay(); game.nextLevel(); } }]
     );
     // Show the "support developer" tip on each clear, until the user supports —
@@ -197,11 +201,11 @@ export class Hud {
   showLose(game) {
     this._showControls(false);
     this._showOverlay(
-      'Out of lives',
-      'Watch a short video to get 3 lives and keep your progress — or start the level over.',
+      t('lose.title'),
+      t('lose.msg'),
       [
-        { label: 'Watch Ad  ·  +3 Lives', primary: true, onClick: () => game.continueWithAd() },
-        { label: 'Restart Level', onClick: () => { this.hideOverlay(); game.retryLevel(); } },
+        { label: t('lose.watch'), primary: true, onClick: () => game.continueWithAd() },
+        { label: t('lose.restart'), onClick: () => { this.hideOverlay(); game.retryLevel(); } },
       ]
     );
   }
@@ -209,9 +213,9 @@ export class Hud {
   showAllComplete(game) {
     this._showControls(false);
     this._showOverlay(
-      'All Levels Complete!',
-      'You cleared every board. A calm, focused mind — well done.',
-      [{ label: 'Play Again', primary: true, onClick: () => { this.hideOverlay(); game.loadLevel(0); } }]
+      t('done.title'),
+      t('done.msg'),
+      [{ label: t('done.again'), primary: true, onClick: () => { this.hideOverlay(); game.loadLevel(0); } }]
     );
   }
 }
