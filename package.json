@@ -1,7 +1,7 @@
 {
-  "name": "arrow-puzzle",
+  "name": "arrowzen",
   "version": "1.0.0",
-  "description": "A relaxing 3D Arrow Puzzle (tap-away) HTML5 game with a zero-dependency WebGL engine and a swappable multi-platform SDK layer.",
+  "description": "Arrowzen — a relaxing tap-away arrow puzzle (HTML5, zero-dependency Canvas 2D) with a swappable platform SDK layer.",
   "type": "module",
   "scripts": {
     "test": "node tests/core.test.mjs",
