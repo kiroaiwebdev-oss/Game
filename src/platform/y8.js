@@ -15,6 +15,7 @@ export default class Y8Adapter extends PlatformAdapter {
     super();
     this.name = 'y8';
     this.ready = false;
+    this.hasAds = true;
   }
 
   async init() {

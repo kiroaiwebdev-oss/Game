@@ -124,19 +124,29 @@ export class Game {
   async requestHint() {
     if (this.state !== GameState.PLAYING || this.busy) return;
     if (!findHint(this.board)) return;
+    // Free hint while the player still has one banked.
     if (this.hints > 0) {
       this.hints -= 1;
       this.hud.updateHints(this);
       this._giveHint();
       return;
     }
-    this.busy = true;
-    this.hud.setHintPending(true);
-    let granted = true;
-    try { granted = await this.adapter.showRewarded(); } catch (_) { granted = true; }
-    this.hud.setHintPending(false);
-    this.busy = false;
-    if (granted) this._giveHint();
+    // Out of free hints. On platforms with no ads (itch.io/local) just grant it.
+    if (!this.adapter.hasAds) { this._giveHint(); return; }
+    // Ad platforms: show a themed rewarded popup ("Watch Ad / No Thanks") first.
+    this.hud.showRewardedPrompt(
+      'Free Hint',
+      'Watch a short video to reveal an arrow you can safely clear.',
+      async () => {
+        this.busy = true;
+        this.hud.setHintPending(true);
+        let granted = true;
+        try { granted = await this.adapter.showRewarded(); } catch (_) { granted = true; }
+        this.hud.setHintPending(false);
+        this.busy = false;
+        if (granted) this._giveHint();
+      }
+    );
   }
 
   _giveHint() {

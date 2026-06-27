@@ -24,6 +24,7 @@ export default class CrazyGamesAdapter extends PlatformAdapter {
     this.sdk = null;
     this.env = 'disabled';
     this._adActive = false;
+    this.hasAds = true;
   }
 
   async init() {

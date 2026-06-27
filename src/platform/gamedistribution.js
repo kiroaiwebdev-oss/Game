@@ -15,6 +15,7 @@ export default class GameDistributionAdapter extends PlatformAdapter {
   constructor() {
     super();
     this.name = 'gamedistribution';
+    this.hasAds = true;
   }
 
   async init() {
@@ -58,12 +59,22 @@ export default class GameDistributionAdapter extends PlatformAdapter {
     try { await window.gdsdk.showAd(); } catch (_) {}
   }
 
-  // Rewarded (hint / continue). Grants on completion or error so it stays usable.
+  // Rewarded (hint / continue). GD rewarded ads must be preloaded with the
+  // rewarded type, then shown. Grants on completion or error so it stays usable.
   async showRewarded() {
     const ok = await this._waitForSdk();
     if (!ok) return true;
-    const rewardedType = window['GD_SDK_REWARDED_ADVERTISEMENT'];
-    try { await (rewardedType ? window.gdsdk.showAd(rewardedType) : window.gdsdk.showAd()); } catch (_) {}
+    const REWARDED = window['GD_SDK_REWARDED_ADVERTISEMENT'];
+    try {
+      if (REWARDED !== undefined) {
+        if (typeof window.gdsdk.preloadAd === 'function') {
+          try { await window.gdsdk.preloadAd(REWARDED); } catch (_) {}
+        }
+        await window.gdsdk.showAd(REWARDED);
+      } else {
+        await window.gdsdk.showAd(); // fallback
+      }
+    } catch (_) {}
     return true;
   }
 }
