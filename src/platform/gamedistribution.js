@@ -40,29 +40,30 @@ export default class GameDistributionAdapter extends PlatformAdapter {
   gameplayStop() {}
   happyTime() {}
 
+  // Wait until the GD SDK instance is actually ready (it loads asynchronously),
+  // so the ad call isn't skipped just because Play was clicked early.
+  async _waitForSdk(timeoutMs = 4000) {
+    const start = Date.now();
+    while (!(window.gdsdk && typeof window.gdsdk.showAd === 'function')) {
+      if (Date.now() - start > timeoutMs) return false;
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    return true;
+  }
+
   // Interstitial (pre-roll on Play, mid-roll on Next) — gdsdk.showAd().
-  showInterstitial() {
-    return new Promise((resolve) => {
-      const gd = window.gdsdk;
-      if (!gd || typeof gd.showAd !== 'function') { resolve(); return; }
-      let settled = false;
-      const done = () => { if (!settled) { settled = true; resolve(); } };
-      try { Promise.resolve(gd.showAd()).then(done).catch(done); } catch (_) { done(); }
-    });
+  async showInterstitial() {
+    const ok = await this._waitForSdk();
+    if (!ok) return;
+    try { await window.gdsdk.showAd(); } catch (_) {}
   }
 
   // Rewarded (hint / continue). Grants on completion or error so it stays usable.
-  showRewarded() {
-    return new Promise((resolve) => {
-      const gd = window.gdsdk;
-      if (!gd || typeof gd.showAd !== 'function') { resolve(true); return; }
-      let settled = false;
-      const done = (v) => { if (!settled) { settled = true; resolve(v); } };
-      const rewardedType = window['GD_SDK_REWARDED_ADVERTISEMENT'];
-      try {
-        Promise.resolve(rewardedType ? gd.showAd(rewardedType) : gd.showAd())
-          .then(() => done(true)).catch(() => done(true));
-      } catch (_) { done(true); }
-    });
+  async showRewarded() {
+    const ok = await this._waitForSdk();
+    if (!ok) return true;
+    const rewardedType = window['GD_SDK_REWARDED_ADVERTISEMENT'];
+    try { await (rewardedType ? window.gdsdk.showAd(rewardedType) : window.gdsdk.showAd()); } catch (_) {}
+    return true;
   }
 }
