@@ -56,6 +56,7 @@ export class Game {
       if (a) { const h = this.board.head(a); this.onboardCell = { x: h.x, y: h.y }; }
     }
     this.adapter.gameplayStart();
+    this.adapter.setContext?.({ level: this.levelIndex + 1, arrows: this.board.remaining });
     this.hud.onLevelStart(this);
   }
 
@@ -146,7 +147,8 @@ export class Game {
   _win() {
     this.state = GameState.WON; this.busy = true;
     this.solveMs = performance.now() - this.startTime;
-    this.audio.win(); this.adapter.gameplayStop(); this.adapter.happyTime();
+    this.audio.win(); this.adapter.gameplayStop();
+    if ((this.levelIndex + 1) % 5 === 0) this.adapter.happyTime(); // sparingly, per docs
     saveProgress(this.levelIndex + 1);
     setTimeout(() => this.hud.showWin(this), 650);
   }

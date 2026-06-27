@@ -24,6 +24,8 @@ export class PlatformAdapter {
   gameplayStart() {}
   gameplayStop() {}
   happyTime() {}
+  setContext() {}
+  clearContext() {}
 
   // Default: no ads available, so always grant the reward (good for itch.io/local).
   async showRewarded() { return true; }

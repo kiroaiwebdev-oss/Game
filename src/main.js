@@ -18,7 +18,7 @@ async function boot() {
 
   const adapter = await createAdapter();
   adapter.loadingStart();
-  adapter.onMuteChange((muted) => audio.setMuted(muted));
+  adapter.onMuteChange((muted) => audio.setSdkMuted(muted));
 
   const levels = buildLevels(40);
 

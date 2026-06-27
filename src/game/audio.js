@@ -5,9 +5,15 @@
 export class AudioEngine {
   constructor() {
     this.ctx = null;
-    this.muted = false;
+    this.userMuted = false; // in-game mute toggle (gear button)
+    this.sdkMuted = false;  // forced by CrazyGames SDK (muteAudio / during ads) — priority
     this.master = null;
   }
+
+  // Effective mute = either source. SDK mute takes priority and cannot be
+  // overridden by the in-game toggle.
+  get muted() { return this.userMuted || this.sdkMuted; }
+  _apply() { if (this.master) this.master.gain.value = this.muted ? 0 : 0.5; }
 
   // Must be called after a user gesture (browser autoplay policy).
   resume() {
@@ -54,9 +60,13 @@ export class AudioEngine {
     this.ambient = { g, oscs, lfo };
   }
 
-  setMuted(muted) {
-    this.muted = muted;
-    if (this.master) this.master.gain.value = muted ? 0 : 0.5;
+  setMuted(muted) {           // in-game toggle
+    this.userMuted = muted;
+    this._apply();
+  }
+  setSdkMuted(muted) {        // CrazyGames SDK muteAudio / during ads (priority)
+    this.sdkMuted = muted;
+    this._apply();
   }
 
   _tone(freq, dur, type = 'sine', gain = 0.3, slideTo = null) {
